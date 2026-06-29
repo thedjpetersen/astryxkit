@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/thedjpetersen/astryxkit/issues"
   },
-  "homepage": "https://github.com/thedjpetersen/astryxkit#readme",
+  "homepage": "https://thedjpetersen.github.io/astryxkit/",
   "keywords": [
     "astryx",
     "cloudflare-workers",
@@ -49,9 +49,13 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "check": "tsc --noEmit",
+    "docs:build": "vite build --config site/vite.config.ts",
+    "docs:dev": "vite --config site/vite.config.ts --host 127.0.0.1",
+    "docs:preview": "vite preview --config site/vite.config.ts --host 127.0.0.1",
+    "docs:screenshot": "node site/scripts/screenshot.mjs",
     "prepare": "npm run build",
     "test": "vitest run",
-    "validate": "npm run check && npm run test && npm run build"
+    "validate": "npm run check && npm run test && npm run build && npm run docs:build"
   },
   "peerDependencies": {
     "@astryxdesign/core": "^0.0.15",
@@ -63,10 +67,12 @@
     "@astryxdesign/cli": "^0.0.15",
     "@astryxdesign/core": "^0.0.15",
     "@cloudflare/workers-types": "^4.20260624.1",
+    "@playwright/test": "^1.61.1",
     "@stylexjs/stylex": "^0.18.3",
     "@types/node": "^26.0.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.2.0",
     "typescript": "^5.5.2",
     "vite": "^7.3.5",
     "vitest": "~3.2.0",

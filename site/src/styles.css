@@ -1,0 +1,15 @@
+html,
+body,
+astryxkit-root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-background-body);
+  color: var(--color-text-primary);
+}
+
+astryxkit-root {
+  display: block;
+}
