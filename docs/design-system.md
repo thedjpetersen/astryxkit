@@ -11,6 +11,10 @@ AstryxKit composes the Astryx design system instead of replacing it.
 - Use `Card` only for independently meaningful items.
 - Use `xstyle` for custom styling.
 - Use semantic tokens from Astryx docs instead of hardcoded values.
+- Prefer neutral documentation surfaces over pastel card grids.
+- Use color as metadata: badges, icon accents, and border accents.
+- Build higher-order surfaces with StyleX when the base component library does
+  not encode the documentation pattern directly.
 
 ## Provider
 
@@ -32,3 +36,18 @@ export function Root() {
 The provider accepts controlled `appearance` and `onAppearanceChange` props when
 the host app wants to own that state. It also accepts a `theme` prop for apps
 that use a generated or brand-specific Astryx theme.
+
+## Documentation Surface Rules
+
+The docs site is allowed to be more composed than raw Astryx examples, but it
+still follows the same system contract:
+
+- no raw `div` elements in UI source;
+- no inline style props;
+- no hardcoded spacing, radius, border, or color values when a token exists;
+- no pastel cards as the default way to create hierarchy;
+- no nested decorative cards;
+- no one-off Cloudflare platform claims without checking current docs.
+
+Good docs surfaces should feel like product infrastructure: dense, scannable,
+token-driven, and anchored by real code.

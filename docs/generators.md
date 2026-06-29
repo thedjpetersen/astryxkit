@@ -21,6 +21,24 @@ ak g <generator> <name>
 | `worker-route <route-name>` | `src/worker/routes/<route-name>.ts` | Cloudflare Worker APIs should start as explicit `WorkerRoute` modules using shared JSON helpers. |
 | `d1-repository <resource-name>` | `src/worker/repositories/<resource-name>-repository.ts` | D1 access benefits from small typed repositories that keep binding lookup and prepared statements close together. |
 
+## Output Contract
+
+Generated files should be useful immediately, but they should not pretend to be
+final product code.
+
+- Shell output wires `ShellHost`, `AstryxKitProvider`, `ShellFrame`, and
+  `ShellAppOutlet`.
+- App output wires a manifest, lazy activation function, default commands,
+  starter preference, and first Astryx UI surface.
+- Command output creates a namespaced `CommandContribution` and an activation
+  binder.
+- Preference output creates a namespaced `PreferenceSchema`.
+- Worker route output creates an explicit route module with request context.
+- D1 repository output creates a small typed repository around a named binding.
+
+Generated files should be reviewed before commit. The generator gives the next
+correct file, not a complete product architecture.
+
 ## Options
 
 ```bash
@@ -47,3 +65,16 @@ These generators map to the framework seams that are stable in AstryxKit:
 They deliberately do not generate Cloudflare bindings, database migrations, or
 product routing files. Those decisions depend on the host application and should
 stay explicit.
+
+## When Not To Generate
+
+Do not use a generator when the output would hide a product decision:
+
+- choosing Worker bindings;
+- designing a D1 schema or migration;
+- deciding authorization and tenancy;
+- creating app-specific routing conventions;
+- selecting a deployment topology.
+
+Use the generator for the stable framework seam, then write the product-specific
+parts by hand.

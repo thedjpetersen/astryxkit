@@ -52,7 +52,7 @@ const sdk = createShellSDK({ platformId: "my-platform" });
 const host = new ShellHost({
   shell: sdk,
   preferencesRoute: "/preferences",
-  docsRoute: "/docs",
+  defaultDocsRoute: "/docs",
 });
 
 host.register({
