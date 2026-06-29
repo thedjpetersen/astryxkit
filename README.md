@@ -1,5 +1,9 @@
 # AstryxKit
 
+[![npm version](https://img.shields.io/npm/v/astryxkit.svg)](https://www.npmjs.com/package/astryxkit)
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-556cd6)](https://thedjpetersen.github.io/astryxkit/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-0d8626.svg)](LICENSE)
+
 AstryxKit is a reusable framework for building Cloudflare Workers applications
 with an Astryx design-system shell, isolated micro-app modules, a command
 palette, layered preferences, and small Worker API helpers.
@@ -13,12 +17,12 @@ can build on.
 
 ## What Is Included
 
-| Export | Purpose |
-| --- | --- |
-| `astryxkit/core` | Shell runtime: commands, context keys, events, app manifests, activation lifecycle, preferences, and import-map helpers. |
-| `astryxkit/react` | React bindings, the Astryx shell frame, app outlet, command palette, and preferences panel. |
-| `astryxkit/design-system` | Default Astryx theme wrapper, appearance mode storage, and shared design-system helpers. |
-| `astryxkit/worker` | Small Cloudflare Workers HTTP and D1 helpers that keep API boundaries explicit. |
+| Export                    | Purpose                                                                                                                  |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `astryxkit/core`          | Shell runtime: commands, context keys, events, app manifests, activation lifecycle, preferences, and import-map helpers. |
+| `astryxkit/react`         | React bindings, the Astryx shell frame, app outlet, command palette, and preferences panel.                              |
+| `astryxkit/design-system` | Default Astryx theme wrapper, appearance mode storage, and shared design-system helpers.                                 |
+| `astryxkit/worker`        | Small Cloudflare Workers HTTP and D1 helpers that keep API boundaries explicit.                                          |
 
 ## When To Use It
 
@@ -39,6 +43,10 @@ apps, teams, or workflows need to live inside the same shell.
 ```bash
 npm install astryxkit @astryxdesign/core @stylexjs/stylex react react-dom
 ```
+
+The package is published as
+[`astryxkit`](https://www.npmjs.com/package/astryxkit) on npm. The public docs
+site is hosted at https://thedjpetersen.github.io/astryxkit/.
 
 AstryxKit keeps React, Astryx Core, and StyleX as peer dependencies so the host
 application owns its UI runtime.
@@ -86,7 +94,8 @@ export function App() {
       host={host}
       workspace={{ name: "Northstar", slug: "northstar" }}
       currentPathname="/app/tasks"
-      brandName="Northstar">
+      brandName="Northstar"
+    >
       <ShellAppOutlet
         appId="tasks"
         host={host}
@@ -159,6 +168,7 @@ AstryxKit ships an `ak` CLI for Rails-like generators. It is also exposed as
 
 ```bash
 ak generators
+ak --version
 ak g shell Northstar
 ak g app Catalog
 ak g command catalog.refresh
@@ -171,6 +181,13 @@ Generators create the repeated extension points that appear in AstryxKit host
 apps: shell composition, micro-app manifests, command contributions, preference
 schemas, Worker routes, and D1 repositories. See
 [`docs/generators.md`](docs/generators.md) for the full rationale and options.
+
+To verify the published CLI from the registry:
+
+```bash
+npx astryxkit@latest --version
+npx astryxkit@latest generators
+```
 
 ## Development
 

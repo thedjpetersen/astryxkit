@@ -3,7 +3,7 @@ import {
   Badge,
   Button,
   Code,
-  CodeBlock,
+  CodeBlock as CoreCodeBlock,
   Heading,
   HStack,
   Icon,
@@ -18,8 +18,10 @@ import {
   TopNavItem,
   VStack,
   type BadgeVariant,
+  type CodeBlockProps,
   type IconName,
 } from "@astryxdesign/core";
+import { defineSyntaxTheme, SyntaxTheme } from "@astryxdesign/core/theme";
 import {
   borderVars,
   colorVars,
@@ -81,6 +83,30 @@ type DocsRoute = {
 const installSnippet = `npm install astryxkit \\
   @astryxdesign/core @stylexjs/stylex \\
   react react-dom`;
+
+const registryVerifySnippet = `npm view astryxkit version dist-tags bin --json
+npx astryxkit@latest --version
+npx astryxkit@latest generators`;
+
+const docsSyntaxTheme = defineSyntaxTheme({
+  name: "astryxkit-docs-dark",
+  tokens: {
+    keyword: "#ff7b72",
+    string: "#a5d6ff",
+    comment: "#8b949e",
+    number: "#79c0ff",
+    function: "#d2a8ff",
+    type: "#ffa657",
+    variable: "#e6edf3",
+    operator: "#ff7b72",
+    constant: "#79c0ff",
+    tag: "#7ee787",
+    attribute: "#79c0ff",
+    property: "#79c0ff",
+    punctuation: "#c9d1d9",
+    background: "#1a2652",
+  },
+});
 
 const shellSnippet = `import { ShellHost } from "astryxkit/core";
 import { ShellFrame, ShellAppOutlet } from "astryxkit/react";
@@ -1831,6 +1857,14 @@ function DocsHero() {
               icon={<Icon icon="search" size="sm" />}
             />
             <Button
+              label="Open npm"
+              href="https://www.npmjs.com/package/astryxkit"
+              target="_blank"
+              rel="noreferrer"
+              variant="secondary"
+              icon={<Icon icon="externalLink" size="sm" />}
+            />
+            <Button
               label="Open GitHub"
               href="https://github.com/thedjpetersen/astryxkit"
               target="_blank"
@@ -1849,7 +1883,7 @@ function DocsHero() {
             <HStack gap={1.5} align="center">
               <span {...stylex.props(styles.statusDot)} />
               <Text type="supporting" color="secondary">
-                framework map
+                published on npm
               </Text>
             </HStack>
             <Code>astryxkit@0.1.0</Code>
@@ -1988,20 +2022,53 @@ function Install() {
           </SectionHeader>
           <section {...stylex.props(styles.notePanel)}>
             <Text as="p" display="block" color="secondary">
-              Use the framework exports directly in product code. The short
+              The package is live on npm as <Code>astryxkit@0.1.0</Code>. Use
+              the framework exports directly in product code. The short
               <Code>ak</Code> binary is for scaffolding files; runtime imports
               stay package-scoped so module boundaries remain obvious.
             </Text>
           </section>
+          <section {...stylex.props(styles.packageMetaPanel)}>
+            <HStack gap={2} wrap="wrap" align="center">
+              <Badge variant="success" label="npm latest" />
+              <Code>0.1.0</Code>
+            </HStack>
+            <Link
+              href="https://www.npmjs.com/package/astryxkit"
+              target="_blank"
+              rel="noreferrer"
+              isStandalone
+            >
+              Open npm package
+            </Link>
+            <Link
+              href="https://github.com/thedjpetersen/astryxkit"
+              target="_blank"
+              rel="noreferrer"
+              isStandalone
+            >
+              Open public repository
+            </Link>
+          </section>
         </section>
-        <CodeBlock
-          title="terminal"
-          language="bash"
-          code={installSnippet}
-          width="100%"
-          xstyle={styles.codeBlockStripe}
-          isWrapped
-        />
+        <aside {...stylex.props(styles.codeStack)} aria-label="Install code">
+          <CodeBlock
+            title="install.sh"
+            language="bash"
+            code={installSnippet}
+            width="100%"
+            xstyle={styles.codeBlockStripe}
+            isWrapped
+          />
+          <CodeBlock
+            title="verify-registry.sh"
+            language="bash"
+            code={registryVerifySnippet}
+            width="100%"
+            xstyle={styles.codeBlockStripe}
+            isWrapped
+          />
+        </aside>
       </section>
     </Band>
   );
@@ -3116,11 +3183,16 @@ function ShipChecklist() {
             />
             <Step
               index="02"
+              title="Verify the registry package"
+              body="Check npm metadata and run the published CLI from a clean install before announcing a release."
+            />
+            <Step
+              index="03"
               title="Check UI composition"
               body="Verify no raw div elements or inline style props enter UI code, and inspect responsive docs screenshots."
             />
             <Step
-              index="03"
+              index="04"
               title="Re-check Cloudflare docs"
               body="Before changing Workers, D1, KV, R2, Durable Objects, Queues, Vectorize, Workers AI, or Agents SDK behavior, retrieve current product docs and limits."
             />
@@ -3130,6 +3202,8 @@ function ShipChecklist() {
           title="release-checks.sh"
           language="bash"
           code={`npm run validate
+npm view astryxkit version dist-tags bin --json
+npx astryxkit@latest --version
 npm run docs:screenshot
 git status --short
 gh run list --workflow Docs --limit 3`}
@@ -3198,6 +3272,10 @@ function LinkList({ links }: { links: LinkRow[] }) {
       ))}
     </ul>
   );
+}
+
+function CodeBlock({ highlightMode = "spans", ...props }: CodeBlockProps) {
+  return <CoreCodeBlock highlightMode={highlightMode} {...props} />;
 }
 
 function isDocsPageId(value: string): value is DocsPageId {
@@ -3506,22 +3584,24 @@ export function DocsApp() {
 
   return (
     <AstryxKitProvider appearance="system">
-      <AppShell
-        xstyle={styles.docsShell}
-        height="auto"
-        variant="section"
-        contentPadding={0}
-        topNav={
-          <TopNavigation
-            activePage={route.pageId}
-            searchQuery={searchQuery}
-            onSearchQueryChange={setSearchQuery}
-          />
-        }
-        sideNav={<SideNavigation activeSection={activeSection} />}
-      >
-        <DocsPage pageId={route.pageId} />
-      </AppShell>
+      <SyntaxTheme theme={docsSyntaxTheme}>
+        <AppShell
+          xstyle={styles.docsShell}
+          height="auto"
+          variant="section"
+          contentPadding={0}
+          topNav={
+            <TopNavigation
+              activePage={route.pageId}
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+            />
+          }
+          sideNav={<SideNavigation activeSection={activeSection} />}
+        >
+          <DocsPage pageId={route.pageId} />
+        </AppShell>
+      </SyntaxTheme>
     </AstryxKitProvider>
   );
 }
@@ -3762,7 +3842,6 @@ const styles = stylex.create({
     minWidth: 0,
   },
   codeBlockStripe: {
-    "--color-syntax-background": "#1a2652",
     borderColor: "#1a2652",
     borderRadius: radiusVars["--radius-inner"],
     boxShadow:
@@ -3774,6 +3853,17 @@ const styles = stylex.create({
     borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
+    padding: spacingVars["--spacing-4"],
+  },
+  packageMetaPanel: {
+    backgroundColor: "#fff",
+    borderColor: "#e3e8ee",
+    borderRadius: radiusVars["--radius-inner"],
+    borderStyle: "solid",
+    borderWidth: borderVars["--border-width"],
+    display: "grid",
+    gap: spacingVars["--spacing-3"],
+    justifyItems: "start",
     padding: spacingVars["--spacing-4"],
   },
   surfaceGrid: {
