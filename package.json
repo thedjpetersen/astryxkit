@@ -1,0 +1,75 @@
+{
+  "name": "astryxkit",
+  "version": "0.1.0",
+  "description": "A micro-app shell framework for Astryx-designed Cloudflare Workers applications.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/thedjpetersen/astryxkit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/thedjpetersen/astryxkit/issues"
+  },
+  "homepage": "https://github.com/thedjpetersen/astryxkit#readme",
+  "keywords": [
+    "astryx",
+    "cloudflare-workers",
+    "micro-app",
+    "shell",
+    "design-system"
+  ],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js"
+    },
+    "./design-system": {
+      "types": "./dist/design-system/index.d.ts",
+      "import": "./dist/design-system/index.js"
+    },
+    "./worker": {
+      "types": "./dist/worker/index.d.ts",
+      "import": "./dist/worker/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "tsc --noEmit",
+    "prepare": "npm run build",
+    "test": "vitest run",
+    "validate": "npm run check && npm run test && npm run build"
+  },
+  "peerDependencies": {
+    "@astryxdesign/core": "^0.0.15",
+    "@stylexjs/stylex": "^0.18.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@astryxdesign/cli": "^0.0.15",
+    "@astryxdesign/core": "^0.0.15",
+    "@cloudflare/workers-types": "^4.20260624.1",
+    "@stylexjs/stylex": "^0.18.3",
+    "@types/node": "^26.0.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.5.2",
+    "vite": "^7.3.5",
+    "vitest": "~3.2.0",
+    "wrangler": "^4.104.0"
+  }
+}
