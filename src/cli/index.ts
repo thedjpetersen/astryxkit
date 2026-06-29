@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFile } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
@@ -30,7 +30,12 @@ export async function runCli(args: string[], io: CliIO = {}): Promise<number> {
   try {
     const [command, ...rest] = args;
 
-    if (!command || command === "help" || command === "--help" || command === "-h") {
+    if (
+      !command ||
+      command === "help" ||
+      command === "--help" ||
+      command === "-h"
+    ) {
       stdout(await rootHelp());
       return 0;
     }
@@ -64,7 +69,9 @@ export async function runCli(args: string[], io: CliIO = {}): Promise<number> {
       }
 
       if (!parsed.name) {
-        stderr(`Missing name for ${parsed.kind} generator.\n\n${generateHelp()}`);
+        stderr(
+          `Missing name for ${parsed.kind} generator.\n\n${generateHelp()}`,
+        );
         return 1;
       }
 
@@ -191,7 +198,9 @@ data access helpers.
 }
 
 async function readVersion(): Promise<string> {
-  const packageJsonPath = fileURLToPath(new URL("../../package.json", import.meta.url));
+  const packageJsonPath = fileURLToPath(
+    new URL("../../package.json", import.meta.url),
+  );
   const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8")) as {
     version?: string;
   };
@@ -200,7 +209,7 @@ async function readVersion(): Promise<string> {
 }
 
 const entryPoint = process.argv[1]
-  ? pathToFileURL(path.resolve(process.argv[1])).href
+  ? pathToFileURL(await realpath(path.resolve(process.argv[1]))).href
   : undefined;
 
 if (entryPoint === import.meta.url) {

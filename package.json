@@ -5,8 +5,8 @@
   "type": "module",
   "license": "MIT",
   "bin": {
-    "ak": "./dist/cli/index.js",
-    "astryxkit": "./dist/cli/index.js"
+    "ak": "dist/cli/index.js",
+    "astryxkit": "dist/cli/index.js"
   },
   "repository": {
     "type": "git",
