@@ -138,6 +138,7 @@ The retrieved documentation notes for this repo are in
 ## Docs Site
 
 The static docs site lives in [`site/`](site/) and is built with Vite.
+The public site is hosted at https://thedjpetersen.github.io/astryxkit/.
 
 ```bash
 npm run docs:dev
@@ -150,6 +151,26 @@ npm run docs:screenshot
 - Production build output: `site/dist`.
 - README screenshot output: `docs/assets/astryxkit-docs-home.png`.
 - GitHub Pages deployment: `.github/workflows/docs.yml`.
+
+## CLI
+
+AstryxKit ships an `ak` CLI for Rails-like generators. It is also exposed as
+`astryxkit` for environments where the short binary is less clear.
+
+```bash
+ak generators
+ak g shell Northstar
+ak g app Catalog
+ak g command catalog.refresh
+ak g preference catalog.density
+ak g worker-route catalog
+ak g d1-repository customer
+```
+
+Generators create the repeated extension points that appear in AstryxKit host
+apps: shell composition, micro-app manifests, command contributions, preference
+schemas, Worker routes, and D1 repositories. See
+[`docs/generators.md`](docs/generators.md) for the full rationale and options.
 
 ## Development
 

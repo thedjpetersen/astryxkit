@@ -4,6 +4,10 @@
   "description": "A micro-app shell framework for Astryx-designed Cloudflare Workers applications.",
   "type": "module",
   "license": "MIT",
+  "bin": {
+    "ak": "./dist/cli/index.js",
+    "astryxkit": "./dist/cli/index.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/thedjpetersen/astryxkit.git"

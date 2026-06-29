@@ -97,7 +97,117 @@ const architectureRows = [
   body: string;
 }>;
 
+const generatorRows = [
+  {
+    command: "ak g shell <product-name>",
+    title: "Shell",
+    variant: "blue",
+    badge: "blue",
+    icon: "menu",
+    path: "src/shell",
+    body: "Creates the host ShellHost, AstryxKitProvider, ShellFrame, and app outlet wiring for a product shell.",
+  },
+  {
+    command: "ak g app <app-name>",
+    title: "Micro-app",
+    variant: "teal",
+    badge: "teal",
+    icon: "viewColumns",
+    path: "src/apps",
+    body: "Creates a manifest, lazy activation function, default commands, a starter preference, and an Astryx UI view.",
+  },
+  {
+    command: "ak g command <app-id>.<name>",
+    title: "Command",
+    variant: "purple",
+    badge: "purple",
+    icon: "check",
+    path: "src/commands",
+    body: "Creates a CommandContribution and a handler binder that can be attached during app activation.",
+  },
+  {
+    command: "ak g preference <app-id>.<name>",
+    title: "Preference",
+    variant: "green",
+    badge: "green",
+    icon: "wrench",
+    path: "src/preferences",
+    body: "Creates a PreferenceSchema ready to include in a ShellAppManifest settings surface.",
+  },
+  {
+    command: "ak g worker-route <route-name>",
+    title: "Worker route",
+    variant: "orange",
+    badge: "orange",
+    icon: "externalLink",
+    path: "src/worker/routes",
+    body: "Creates a Cloudflare WorkerRoute module using AstryxKit JSON response helpers.",
+  },
+  {
+    command: "ak g d1-repository <resource-name>",
+    title: "D1 repository",
+    variant: "cyan",
+    badge: "cyan",
+    icon: "info",
+    path: "src/worker/repositories",
+    body: "Creates a small D1 repository around requireD1Database, prepared statements, and batch helpers.",
+  },
+] satisfies Array<{
+  command: string;
+  title: string;
+  variant: CardVariant;
+  badge: BadgeVariant;
+  icon: IconName;
+  path: string;
+  body: string;
+}>;
+
+const apiRows = [
+  {
+    title: "ShellHost",
+    packageName: "astryxkit/core",
+    badge: "Runtime",
+    badgeVariant: "blue",
+    body: "Owns app registration, activation, command routing, feature context keys, workspace navigation, and host events.",
+  },
+  {
+    title: "ShellAppManifest",
+    packageName: "astryxkit/core",
+    badge: "Apps",
+    badgeVariant: "teal",
+    body: "Describes a micro-app: route, entry URL, commands, features, preferences, owner team, and lazy module loader.",
+  },
+  {
+    title: "ShellFrame",
+    packageName: "astryxkit/react",
+    badge: "React",
+    badgeVariant: "purple",
+    body: "Renders the Astryx shell with navigation, command palette, preferences panel, app list, and active app content.",
+  },
+  {
+    title: "createWorkerRouter",
+    packageName: "astryxkit/worker",
+    badge: "Workers",
+    badgeVariant: "green",
+    body: "Composes explicit WorkerRoute handlers, optional health checks, asset fallback, and JSON not-found responses.",
+  },
+] satisfies Array<{
+  title: string;
+  packageName: string;
+  badge: string;
+  badgeVariant: BadgeVariant;
+  body: string;
+}>;
+
 const installSnippet = `npm install astryxkit @astryxdesign/core @stylexjs/stylex react react-dom`;
+
+const cliSnippet = `ak generators
+ak g shell Northstar
+ak g app Catalog
+ak g command catalog.refresh
+ak g preference catalog.density
+ak g worker-route catalog
+ak g d1-repository customer`;
 
 const runtimeSnippet = `import { ShellHost, createShellSDK } from "astryxkit/core";
 
@@ -163,6 +273,7 @@ function TopNavigation() {
         <>
           <TopNavItem label="Overview" href="#overview" isSelected />
           <TopNavItem label="Install" href="#install" />
+          <TopNavItem label="CLI" href="#cli" />
           <TopNavItem label="APIs" href="#exports" />
           <TopNavItem label="Cloudflare" href="#cloudflare" />
         </>
@@ -187,10 +298,13 @@ function SideNavigation() {
       <SideNavSection title="Start">
         <SideNavItem label="Overview" href="#overview" icon="info" isSelected />
         <SideNavItem label="Install" href="#install" icon="copy" />
+        <SideNavItem label="CLI" href="#cli" icon="menu" />
         <SideNavItem label="Quick start" href="#quick-start" icon="check" />
       </SideNavSection>
       <SideNavSection title="Framework">
         <SideNavItem label="Package exports" href="#exports" icon="menu" />
+        <SideNavItem label="Generators" href="#generators" icon="wrench" />
+        <SideNavItem label="API reference" href="#api-reference" icon="viewColumns" />
         <SideNavItem label="Architecture" href="#architecture" icon="wrench" />
         <SideNavItem label="Cloudflare" href="#cloudflare" icon="warning" />
       </SideNavSection>
@@ -244,6 +358,63 @@ function ArchitectureCard({
         <HStack gap={2} align="center" wrap="wrap">
           <Icon icon="check" color="accent" />
           <Badge variant={badgeVariant} label={badge} />
+        </HStack>
+        <Heading level={3}>{title}</Heading>
+        <Text as="p" display="block" color="secondary">
+          {body}
+        </Text>
+      </VStack>
+    </Card>
+  );
+}
+
+function GeneratorCard({
+  badge,
+  body,
+  command,
+  icon,
+  path,
+  title,
+  variant,
+}: (typeof generatorRows)[number]) {
+  return (
+    <Card variant={variant} padding={4} minHeight={212}>
+      <VStack gap={3}>
+        <HStack gap={2} align="center" wrap="wrap">
+          <Icon icon={icon} color="primary" />
+          <Badge variant={badge} label={title} />
+        </HStack>
+        <VStack gap={1}>
+          <Text as="p" display="block" type="label">
+            <Code>{command}</Code>
+          </Text>
+          <Text as="p" display="block" color="secondary">
+            Writes to <Code>{path}</Code>.
+          </Text>
+        </VStack>
+        <Text as="p" display="block">
+          {body}
+        </Text>
+      </VStack>
+    </Card>
+  );
+}
+
+function ApiCard({
+  badge,
+  badgeVariant,
+  body,
+  packageName,
+  title,
+}: (typeof apiRows)[number]) {
+  return (
+    <Card padding={4} minHeight={172}>
+      <VStack gap={3}>
+        <HStack gap={2} align="center" wrap="wrap">
+          <Badge variant={badgeVariant} label={badge} />
+          <Text as="p" display="block" color="secondary">
+            <Code>{packageName}</Code>
+          </Text>
         </HStack>
         <Heading level={3}>{title}</Heading>
         <Text as="p" display="block" color="secondary">
@@ -341,6 +512,60 @@ export function DocsApp() {
           </VStack>
         </Section>
 
+        <Section id="cli" variant="muted" padding={6}>
+          <VStack gap={4} width="100%">
+            <VStack gap={2}>
+              <Heading level={2}>CLI</Heading>
+              <Text as="p" display="block" color="secondary">
+                The package ships an <Code>ak</Code> binary for Rails-like
+                generators that create the repeated AstryxKit extension points
+                host products need.
+              </Text>
+            </VStack>
+            <CodeBlock
+              title="ak"
+              language="bash"
+              code={cliSnippet}
+              width="100%"
+              isWrapped
+            />
+            <HStack gap={2} wrap="wrap">
+              <Button
+                label="Generator reference"
+                href="#generators"
+                variant="primary"
+                icon={<Icon icon="chevronRight" size="sm" />}
+              />
+              <Button
+                label="CLI source"
+                href="https://github.com/thedjpetersen/astryxkit/tree/main/src/cli"
+                target="_blank"
+                rel="noreferrer"
+                variant="ghost"
+                icon={<Icon icon="externalLink" size="sm" />}
+              />
+            </HStack>
+          </VStack>
+        </Section>
+
+        <Section id="generators" variant="section" padding={6}>
+          <VStack gap={4} width="100%">
+            <VStack gap={2}>
+              <Heading level={2}>Generators</Heading>
+              <Text as="p" display="block" color="secondary">
+                Generators are scoped to stable framework concepts: shell
+                composition, app manifests, command contributions, preferences,
+                Worker routes, and D1 repositories.
+              </Text>
+            </VStack>
+            <Grid columns={{ minWidth: 320 }} gap={3}>
+              {generatorRows.map((entry) => (
+                <GeneratorCard key={entry.command} {...entry} />
+              ))}
+            </Grid>
+          </VStack>
+        </Section>
+
         <Section id="quick-start" variant="muted" padding={6}>
           <VStack gap={4} width="100%">
             <VStack gap={2}>
@@ -367,6 +592,23 @@ export function DocsApp() {
                 isWrapped
                 maxHeight={620}
               />
+            </Grid>
+          </VStack>
+        </Section>
+
+        <Section id="api-reference" variant="section" padding={6}>
+          <VStack gap={4} width="100%">
+            <VStack gap={2}>
+              <Heading level={2}>API reference</Heading>
+              <Text as="p" display="block" color="secondary">
+                The public API is split by runtime boundary so host apps can
+                adopt only the pieces they need.
+              </Text>
+            </VStack>
+            <Grid columns={{ minWidth: 280 }} gap={3}>
+              {apiRows.map((entry) => (
+                <ApiCard key={entry.title} {...entry} />
+              ))}
             </Grid>
           </VStack>
         </Section>
