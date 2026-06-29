@@ -31,7 +31,7 @@ import {
   typographyVars,
 } from "@astryxdesign/core/theme/tokens.stylex";
 import * as stylex from "@stylexjs/stylex";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AstryxKitProvider } from "../../src/design-system";
 
 type Surface = {
@@ -53,6 +53,29 @@ type SpecRow = {
 type LinkRow = {
   href: string;
   label: string;
+};
+
+type DocsSectionGroup = "Build" | "Concepts" | "Reference" | "Start";
+type DocsPageId = "build" | "overview" | "quickstart" | "reference" | "runtime";
+
+type DocsSection = {
+  group: DocsSectionGroup;
+  icon: IconName;
+  id: string;
+  label: string;
+  pageId: DocsPageId;
+  summary: string;
+};
+
+type TopNavigationItem = {
+  href: string;
+  label: string;
+  pageId: DocsPageId;
+};
+
+type DocsRoute = {
+  pageId: DocsPageId;
+  sectionId?: string;
 };
 
 const installSnippet = `npm install astryxkit \\
@@ -158,16 +181,15 @@ const reactSnippet = `import {
   usePreferenceInspection,
 } from "astryxkit/react";
 
-useCommandSource({
-  host,
-  source: {
-    id: "catalog:bulk-actions",
-    appId: "catalog",
-    label: "Catalog bulk actions",
-    ring: "feature",
-    commands,
-  },
-});`;
+const source = {
+  id: "catalog:bulk-actions",
+  appId: "catalog",
+  label: "Catalog bulk actions",
+  ring: "feature",
+  commands,
+};
+
+useCommandSource(source, host.getShell());`;
 
 const designSnippet = `import { AstryxKitProvider } from "astryxkit/design-system";
 import * as stylex from "@stylexjs/stylex";
@@ -193,6 +215,37 @@ ak g app Billing --dry-run
 
 # Place generated files in a product folder.
 ak g app Catalog --dir src/features`;
+
+const cliReferenceSnippet = `ak --help
+ak version
+ak generators
+ak generate --list
+
+ak generate app Catalog --dir src/features
+ak g worker-route catalog --dry-run
+ak g preference catalog.density --force`;
+
+const cliOutputSnippet = `create    src/apps/catalog/index.tsx
+create    src/commands/catalog/refresh.ts
+skip      src/worker/routes/catalog.ts
+overwrite src/preferences/catalog/density.ts`;
+
+const cliWorkflowSnippet = `# Start with the product shell.
+ak g shell Northstar
+
+# Add a lazy micro-app.
+ak g app Catalog
+
+# Extract shared app seams when they need tests or reuse.
+ak g command catalog.refresh
+ak g preference catalog.density
+
+# Add Worker request and data boundaries.
+ak g worker-route catalog
+ak g d1-repository customer
+
+# Preview a customized output root first.
+ak g app Billing --dir src/features --dry-run`;
 
 const workerSnippet = `import { createWorkerRouter, json } from "astryxkit/worker";
 import { catalogRoute } from "./routes/catalog";
@@ -231,12 +284,87 @@ export function createCustomerRepository(env: Env) {
   };
 }`;
 
+const projectLayoutSnippet = `src/
+  shell/
+    northstar.tsx
+  apps/
+    catalog/
+      index.tsx
+      manifest.ts
+      commands.ts
+      preferences.ts
+  commands/
+    catalog/
+      refresh.ts
+  preferences/
+    catalog/
+      density.ts
+  worker/
+    routes/
+      catalog.ts
+    repositories/
+      customer-repository.ts`;
+
+const contextSnippet = `const sdk = host.getShell();
+
+sdk.context.set("catalog.selectionCount", selectedIds.length);
+
+const refreshCommand: CommandContribution = {
+  id: "catalog.refresh",
+  appId: "catalog",
+  category: "Catalog",
+  title: "Refresh Catalog",
+  when: "appActive == 'catalog' && catalog.selectionCount != 0",
+};
+
+const isCatalogActive = useContextKey("appActive", "", sdk) === "catalog";`;
+
+const eventsSnippet = `const host = new ShellHost({
+  eventTypes: ["catalog.refreshed", "catalog.failed"],
+});
+
+context.disposeWithApp(
+  context.shell.events.on("catalog.refreshed", (event) => {
+    console.info(event.type, event.timestamp, event.payload);
+  })
+);
+
+context.shell.events.emit("catalog.refreshed", {
+  appId: context.app.id,
+  refreshedAt: Date.now(),
+});`;
+
+const generatedContractSnippet = `// Generated command files are intentionally small.
+export const refreshCatalogCommand: CommandContribution = {
+  id: "catalog.refresh",
+  appId: "catalog",
+  category: "Catalog",
+  title: "Refresh Catalog",
+  kind: "action",
+};
+
+export function bindRefreshCatalogCommand(shell: ShellSDK) {
+  return shell.commands.bind(refreshCatalogCommand.id, async () => {
+    // Product behavior belongs here.
+  });
+}`;
+
+const exportMapSnippet = `import { ShellHost, shell } from "astryxkit/core";
+import {
+  ShellAppOutlet,
+  ShellCommandPalette,
+  ShellFrame,
+  ShellPreferencesPanel,
+} from "astryxkit/react";
+import { AstryxKitProvider } from "astryxkit/design-system";
+import { createWorkerRouter, json } from "astryxkit/worker";`;
+
 const packageSurfaces: Surface[] = [
   {
     body: "The framework boundary for app registration, activation, command routing, context keys, preferences, events, and import maps.",
     code: "astryxkit/core",
     eyebrow: "Runtime",
-    href: "#lifecycle",
+    href: "#/runtime/lifecycle",
     icon: "wrench",
     title: "Shell runtime",
   },
@@ -244,7 +372,7 @@ const packageSurfaces: Surface[] = [
     body: "The React integration for the shell frame, active app outlet, command palette, preferences panel, and host-state hooks.",
     code: "astryxkit/react",
     eyebrow: "Interface",
-    href: "#react",
+    href: "#/runtime/react",
     icon: "viewColumns",
     title: "React shell",
   },
@@ -252,7 +380,7 @@ const packageSurfaces: Surface[] = [
     body: "The Astryx provider wrapper and appearance persistence layer. Use Astryx controls, then compose custom surfaces with StyleX.",
     code: "astryxkit/design-system",
     eyebrow: "Design",
-    href: "#design-system",
+    href: "#/runtime/design-system",
     icon: "checkDouble",
     title: "Design system",
   },
@@ -260,11 +388,549 @@ const packageSurfaces: Surface[] = [
     body: "Small helpers for JSON responses, request parsing, route composition, asset fallback, health checks, and D1 access.",
     code: "astryxkit/worker",
     eyebrow: "Edge",
-    href: "#workers",
+    href: "#/reference/workers",
     icon: "externalLink",
     title: "Worker boundary",
   },
 ];
+
+const architectureRows: SpecRow[] = [
+  {
+    detail:
+      "Owns product routes, deployment, Cloudflare bindings, data schemas, authorization, tenancy, and product policy.",
+    name: "Host product",
+    tag: "product",
+    tagVariant: "blue",
+  },
+  {
+    detail:
+      "Owns app registration, activation, command routing, context keys, preferences, events, and app-scoped disposal.",
+    name: "Shell runtime",
+    tag: "core",
+    tagVariant: "purple",
+  },
+  {
+    detail:
+      "Owns a manifest, lazy activation module, commands, preferences, features, and rendered application surface.",
+    name: "Micro-app",
+    tag: "app",
+    tagVariant: "teal",
+  },
+  {
+    detail:
+      "Owns frame composition, active app outlet, command palette, preferences panel, and host-state hooks.",
+    name: "React package",
+    tag: "react",
+    tagVariant: "green",
+  },
+  {
+    detail:
+      "Owns only request-boundary helpers; schemas, migrations, bindings, and deployment topology stay in the host app.",
+    name: "Worker helpers",
+    tag: "edge",
+    tagVariant: "orange",
+  },
+];
+
+const projectLayoutRows: SpecRow[] = [
+  {
+    detail:
+      "The shell module constructs one ShellHost, sets navigation routes, wraps AstryxKitProvider, and renders ShellFrame.",
+    name: "src/shell",
+    tag: "host",
+    tagVariant: "blue",
+  },
+  {
+    detail:
+      "Each app folder keeps manifest, activation, local commands, local preferences, and its first rendered surface together.",
+    name: "src/apps/<app>",
+    tag: "micro-app",
+    tagVariant: "teal",
+  },
+  {
+    detail:
+      "Shared command modules are useful when commands need tests or are bound from several activation paths.",
+    name: "src/commands",
+    tag: "commands",
+    tagVariant: "purple",
+  },
+  {
+    detail:
+      "Shared preference modules keep namespaced keys and schema migrations close to their owning app.",
+    name: "src/preferences",
+    tag: "settings",
+    tagVariant: "green",
+  },
+  {
+    detail:
+      "Worker route and repository modules use AstryxKit helpers but keep bindings, auth, and persistence decisions explicit.",
+    name: "src/worker",
+    tag: "edge",
+    tagVariant: "orange",
+  },
+];
+
+const manifestRows: SpecRow[] = [
+  {
+    detail:
+      "Stable namespace used by commands, preferences, app activation, active-app context, and route matching.",
+    name: "id",
+    tag: "required",
+    tagVariant: "blue",
+  },
+  {
+    detail:
+      "Human labels for navigation, loading states, ownership display, and app catalog surfaces.",
+    name: "name / ownerTeam",
+    tag: "required",
+    tagVariant: "teal",
+  },
+  {
+    detail:
+      "The route matched by ShellHost.getManifestForPathname. Child paths match by prefix.",
+    name: "route",
+    tag: "routing",
+    tagVariant: "purple",
+  },
+  {
+    detail:
+      "Documented module URL plus the lazy loader function that resolves to an activate(context) module.",
+    name: "entryUrl / load",
+    tag: "module",
+    tagVariant: "green",
+  },
+  {
+    detail:
+      "Declared immediately during registration so navigation, palette search, and lazy activation can work before module load.",
+    name: "commands",
+    tag: "extension",
+    tagVariant: "orange",
+  },
+  {
+    detail:
+      "Preference schemas and seed defaults are registered with the shared PreferencesStore when the manifest is registered.",
+    name: "preferences",
+    tag: "settings",
+    tagVariant: "cyan",
+  },
+  {
+    detail:
+      "Feature contributions map a feature id to a context key so host UI and commands can share feature state.",
+    name: "features",
+    tag: "context",
+    tagVariant: "purple",
+  },
+];
+
+const activationRows: SpecRow[] = [
+  {
+    detail:
+      "The manifest being activated; use it for app id, owner metadata, feature list, and route-local decisions.",
+    name: "context.app",
+    tag: "activation",
+    tagVariant: "blue",
+  },
+  {
+    detail:
+      "The ShellHost instance for navigation, manifest lookup, active app state, palette results, settings groups, and events.",
+    name: "context.host",
+    tag: "host",
+    tagVariant: "teal",
+  },
+  {
+    detail:
+      "The ShellSDK instance for commands, context, events, and preferences. Prefer this over importing a second singleton.",
+    name: "context.shell",
+    tag: "sdk",
+    tagVariant: "purple",
+  },
+  {
+    detail:
+      "Registers command bindings, dynamic sources, event listeners, and subscriptions into the app-scoped DisposableStore.",
+    name: "disposeWithApp",
+    tag: "cleanup",
+    tagVariant: "green",
+  },
+  {
+    detail:
+      "The returned instance may render React and must dispose its own app resources when deactivated.",
+    name: "ShellAppInstance",
+    tag: "render",
+    tagVariant: "orange",
+  },
+];
+
+const contextRows: SpecRow[] = [
+  {
+    detail:
+      "Set or clear shell-wide values. Passing undefined removes a key and notifies subscribers.",
+    name: "context.set",
+    tag: "write",
+    tagVariant: "blue",
+  },
+  {
+    detail:
+      "Read a typed value or snapshot the whole map for diagnostic and rendering paths.",
+    name: "context.get / snapshot",
+    tag: "read",
+    tagVariant: "teal",
+  },
+  {
+    detail:
+      "Supports truthy keys, negation, equality, inequality, and && clauses for command and preference visibility.",
+    name: "context.matches",
+    tag: "when",
+    tagVariant: "purple",
+  },
+  {
+    detail:
+      "ShellHost sets appActive on activation and clears it on deactivate, making app route state available to commands.",
+    name: "appActive",
+    tag: "built-in",
+    tagVariant: "green",
+  },
+  {
+    detail:
+      "Feature contributions let the host toggle context keys through setFeatureEnabled(appId, featureId, isEnabled).",
+    name: "features",
+    tag: "flags",
+    tagVariant: "orange",
+  },
+];
+
+const eventRows: SpecRow[] = [
+  {
+    detail:
+      "Creates a typed ShellEvent with type, payload, and timestamp, then notifies listeners registered for that type.",
+    name: "events.emit",
+    tag: "publish",
+    tagVariant: "blue",
+  },
+  {
+    detail:
+      "Returns a Disposable. Bind listeners through disposeWithApp when they belong to an activated app module.",
+    name: "events.on",
+    tag: "listen",
+    tagVariant: "teal",
+  },
+  {
+    detail:
+      "ShellHost records only the event types supplied in constructor options so diagnostics remain deliberate.",
+    name: "eventTypes",
+    tag: "host",
+    tagVariant: "purple",
+  },
+  {
+    detail:
+      "Returns the captured host event history for UI panels, logs, and support diagnostics.",
+    name: "host.events",
+    tag: "inspect",
+    tagVariant: "green",
+  },
+];
+
+const docsSections: DocsSection[] = [
+  {
+    group: "Start",
+    icon: "info",
+    id: "overview",
+    label: "Overview",
+    pageId: "overview",
+    summary: "Framework positioning, package surfaces, and the system map.",
+  },
+  {
+    group: "Start",
+    icon: "copy",
+    id: "install",
+    label: "Install",
+    pageId: "quickstart",
+    summary: "Peer dependency install command and import boundary notes.",
+  },
+  {
+    group: "Start",
+    icon: "chevronRight",
+    id: "quickstart",
+    label: "Quickstart",
+    pageId: "quickstart",
+    summary: "Create a shell, register an app manifest, and render the outlet.",
+  },
+  {
+    group: "Start",
+    icon: "menu",
+    id: "project-layout",
+    label: "Project layout",
+    pageId: "quickstart",
+    summary:
+      "Where shell, app, command, preference, Worker, and repository files belong.",
+  },
+  {
+    group: "Concepts",
+    icon: "viewColumns",
+    id: "framework-map",
+    label: "Framework map",
+    pageId: "overview",
+    summary: "Runtime, React, design-system, and Worker ownership boundaries.",
+  },
+  {
+    group: "Concepts",
+    icon: "checkDouble",
+    id: "architecture",
+    label: "Architecture model",
+    pageId: "overview",
+    summary:
+      "Ownership boundaries between host products, shell runtime, micro-apps, React, and Workers.",
+  },
+  {
+    group: "Concepts",
+    icon: "copy",
+    id: "manifests",
+    label: "App manifests",
+    pageId: "runtime",
+    summary:
+      "The route, module, command, preference, and feature contract for each micro-app.",
+  },
+  {
+    group: "Concepts",
+    icon: "clock",
+    id: "lifecycle",
+    label: "Runtime lifecycle",
+    pageId: "runtime",
+    summary: "Host construction, app registration, activation, and disposal.",
+  },
+  {
+    group: "Concepts",
+    icon: "chevronRight",
+    id: "activation-context",
+    label: "Activation context",
+    pageId: "runtime",
+    summary:
+      "What activate(context) receives and how app-scoped disposal should be used.",
+  },
+  {
+    group: "Concepts",
+    icon: "search",
+    id: "commands",
+    label: "Commands",
+    pageId: "runtime",
+    summary: "Palette modes, ranking, lazy activation, and context filtering.",
+  },
+  {
+    group: "Concepts",
+    icon: "wrench",
+    id: "preferences",
+    label: "Preferences",
+    pageId: "runtime",
+    summary: "Layered settings resolution with scope and source inspection.",
+  },
+  {
+    group: "Concepts",
+    icon: "arrowUp",
+    id: "events",
+    label: "Context and events",
+    pageId: "runtime",
+    summary:
+      "Context keys, when expressions, feature toggles, event emission, and host event history.",
+  },
+  {
+    group: "Concepts",
+    icon: "menu",
+    id: "react",
+    label: "React shell",
+    pageId: "runtime",
+    summary: "ShellFrame, ShellAppOutlet, command palette, and React hooks.",
+  },
+  {
+    group: "Concepts",
+    icon: "checkDouble",
+    id: "design-system",
+    label: "Design system",
+    pageId: "runtime",
+    summary: "Astryx primitives, StyleX composition, tokens, and UI rules.",
+  },
+  {
+    group: "Build",
+    icon: "menu",
+    id: "cli",
+    label: "CLI",
+    pageId: "build",
+    summary: "Generator command surface and scaffold ownership boundaries.",
+  },
+  {
+    group: "Build",
+    icon: "copy",
+    id: "cli-reference",
+    label: "CLI reference",
+    pageId: "build",
+    summary: "Exact ak commands, flags, stdout actions, and error behavior.",
+  },
+  {
+    group: "Build",
+    icon: "chevronRight",
+    id: "cli-workflows",
+    label: "CLI workflows",
+    pageId: "build",
+    summary:
+      "Recommended scaffold order, naming rules, custom directories, and safe overwrite workflow.",
+  },
+  {
+    group: "Build",
+    icon: "copy",
+    id: "generators",
+    label: "Generators",
+    pageId: "build",
+    summary: "Generated app, command, preference, Worker route, and D1 files.",
+  },
+  {
+    group: "Build",
+    icon: "checkDouble",
+    id: "generated-contracts",
+    label: "Generated contracts",
+    pageId: "build",
+    summary:
+      "What generated files promise, what they intentionally leave to product code, and when to edit them.",
+  },
+  {
+    group: "Reference",
+    icon: "externalLink",
+    id: "workers",
+    label: "Workers",
+    pageId: "reference",
+    summary: "HTTP helpers, D1 helpers, and external Cloudflare references.",
+  },
+  {
+    group: "Reference",
+    icon: "copy",
+    id: "export-map",
+    label: "Export map",
+    pageId: "reference",
+    summary:
+      "Package entrypoints, public exports, and the ownership boundary each import implies.",
+  },
+  {
+    group: "Reference",
+    icon: "wrench",
+    id: "troubleshooting",
+    label: "Troubleshooting",
+    pageId: "reference",
+    summary:
+      "Common integration failures around activation, commands, context, preferences, and Workers.",
+  },
+  {
+    group: "Reference",
+    icon: "check",
+    id: "reference",
+    label: "API reference",
+    pageId: "reference",
+    summary: "Public AstryxKit exports and repository documentation links.",
+  },
+  {
+    group: "Reference",
+    icon: "success",
+    id: "ship",
+    label: "Ship checklist",
+    pageId: "reference",
+    summary: "Validation, UI inspection, and platform documentation checks.",
+  },
+];
+
+const docsSectionGroups: Array<{
+  ids: string[];
+  title: DocsSectionGroup;
+}> = [
+  {
+    title: "Start",
+    ids: ["overview", "install", "quickstart", "project-layout"],
+  },
+  {
+    title: "Concepts",
+    ids: [
+      "framework-map",
+      "architecture",
+      "manifests",
+      "lifecycle",
+      "activation-context",
+      "commands",
+      "preferences",
+      "events",
+      "react",
+      "design-system",
+    ],
+  },
+  {
+    title: "Build",
+    ids: [
+      "cli",
+      "cli-reference",
+      "cli-workflows",
+      "generators",
+      "generated-contracts",
+    ],
+  },
+  {
+    title: "Reference",
+    ids: ["workers", "export-map", "troubleshooting", "reference", "ship"],
+  },
+];
+
+const topNavigationItems: TopNavigationItem[] = [
+  { href: "#/overview", label: "Overview", pageId: "overview" },
+  { href: "#/quickstart", label: "Quickstart", pageId: "quickstart" },
+  { href: "#/runtime", label: "Runtime", pageId: "runtime" },
+  { href: "#/build", label: "Build", pageId: "build" },
+  { href: "#/reference", label: "Reference", pageId: "reference" },
+];
+
+const docsSectionIds = docsSections.map((section) => section.id);
+const docsSectionById = new Map<string, DocsSection>(
+  docsSections.map((section) => [section.id, section]),
+);
+const docsPages: Record<DocsPageId, { label: string; sectionIds: string[] }> = {
+  overview: {
+    label: "Overview",
+    sectionIds: ["overview", "framework-map", "architecture"],
+  },
+  quickstart: {
+    label: "Quickstart",
+    sectionIds: ["install", "quickstart", "project-layout"],
+  },
+  runtime: {
+    label: "Runtime",
+    sectionIds: [
+      "manifests",
+      "lifecycle",
+      "activation-context",
+      "commands",
+      "preferences",
+      "events",
+      "react",
+      "design-system",
+    ],
+  },
+  build: {
+    label: "Build",
+    sectionIds: [
+      "cli",
+      "cli-reference",
+      "cli-workflows",
+      "generators",
+      "generated-contracts",
+    ],
+  },
+  reference: {
+    label: "Reference",
+    sectionIds: [
+      "workers",
+      "export-map",
+      "troubleshooting",
+      "reference",
+      "ship",
+    ],
+  },
+};
+
+function createDocsHref(pageId: DocsPageId, sectionId?: string) {
+  return `#/${pageId}${sectionId ? `/${sectionId}` : ""}`;
+}
 
 const lifecycleSteps: Surface[] = [
   {
@@ -365,7 +1031,8 @@ const commandModes: CommandMode[] = [
 
 const demoCommands: DemoCommand[] = [
   {
-    description: "Open the shared preference inspector for platform, product, app, and feature settings.",
+    description:
+      "Open the shared preference inspector for platform, product, app, and feature settings.",
     id: "platform.openPreferences",
     kind: "page",
     keywords: ["settings", "configuration", "preferences"],
@@ -374,7 +1041,8 @@ const demoCommands: DemoCommand[] = [
     title: "Open Preferences",
   },
   {
-    description: "Open the product documentation surface from anywhere in the shell.",
+    description:
+      "Open the product documentation surface from anywhere in the shell.",
     id: "platform.openDocs",
     kind: "page",
     keywords: ["docs", "help", "reference"],
@@ -400,7 +1068,8 @@ const demoCommands: DemoCommand[] = [
     when: "appActive == 'catalog'",
   },
   {
-    description: "Archive every selected catalog item through a feature-scoped command source.",
+    description:
+      "Archive every selected catalog item through a feature-scoped command source.",
     id: "catalog.bulkArchive",
     kind: "action",
     keywords: ["bulk", "archive", "selected"],
@@ -409,7 +1078,8 @@ const demoCommands: DemoCommand[] = [
     when: "catalog.selectionCount != 0",
   },
   {
-    description: "Jump directly to the customer entity that owns the selected catalog item.",
+    description:
+      "Jump directly to the customer entity that owns the selected catalog item.",
     id: "catalog.customer",
     kind: "entity",
     keywords: ["customer", "owner", "account"],
@@ -417,7 +1087,8 @@ const demoCommands: DemoCommand[] = [
     title: "Customer Entity",
   },
   {
-    description: "Explain how Catalog commands are registered, filtered, and activated.",
+    description:
+      "Explain how Catalog commands are registered, filtered, and activated.",
     id: "catalog.commandHelp",
     kind: "help",
     keywords: ["commands", "palette", "catalog"],
@@ -434,39 +1105,227 @@ const demoCommands: DemoCommand[] = [
   },
 ];
 
+const cliCommandRows: SpecRow[] = [
+  {
+    detail:
+      "Prints the root command help, usage block, command list, and generator hint. Exits 0.",
+    name: "ak help / --help / -h",
+    tag: "help",
+    tagVariant: "blue",
+  },
+  {
+    detail:
+      "Prints the package version from package.json. The short flag is useful in install and release checks.",
+    name: "ak version / --version / -v",
+    tag: "version",
+    tagVariant: "teal",
+  },
+  {
+    detail:
+      "Lists every generator with command shape, default output directory, and description.",
+    name: "ak generators",
+    tag: "list",
+    tagVariant: "purple",
+  },
+  {
+    detail:
+      "Lists available generators from the generate command path without requiring a generator name.",
+    name: "ak generate --list / ak g -l",
+    tag: "list",
+    tagVariant: "purple",
+  },
+  {
+    detail:
+      "Runs a generator, writes planned files, and prints one action line per file.",
+    name: "ak generate <generator> <name>",
+    tag: "write",
+    tagVariant: "green",
+  },
+  {
+    detail:
+      "Short alias for generate. The docs prefer it for examples because generator names are already explicit.",
+    name: "ak g <generator> <name>",
+    tag: "alias",
+    tagVariant: "cyan",
+  },
+];
+
+const cliOptionRows: SpecRow[] = [
+  {
+    detail:
+      "Overrides the generator output root. The target path must still resolve inside the current working directory.",
+    name: "--dir <path> / --dir=path",
+    tag: "output",
+    tagVariant: "blue",
+  },
+  {
+    detail:
+      "Builds the same file plan and prints create or skip actions without creating directories or writing files.",
+    name: "--dry-run",
+    tag: "preview",
+    tagVariant: "teal",
+  },
+  {
+    detail:
+      "Allows existing files to be overwritten. Without this flag, an existing target aborts the command.",
+    name: "--force / -f",
+    tag: "write",
+    tagVariant: "orange",
+  },
+  {
+    detail:
+      "Prints the generator list from the generate command and exits before name validation.",
+    name: "--list / -l",
+    tag: "list",
+    tagVariant: "purple",
+  },
+];
+
+const cliActionRows: SpecRow[] = [
+  {
+    detail:
+      "The target did not exist and was written, or would be written during a dry run.",
+    name: "create",
+    tag: "stdout",
+    tagVariant: "green",
+  },
+  {
+    detail:
+      "Only appears in dry-run mode when the target already exists. The command does not write.",
+    name: "skip",
+    tag: "dry-run",
+    tagVariant: "teal",
+  },
+  {
+    detail: "The target existed and was replaced because --force was provided.",
+    name: "overwrite",
+    tag: "force",
+    tagVariant: "orange",
+  },
+  {
+    detail:
+      "Unknown commands, unknown generators, missing names, existing files without --force, invalid names, and outside-cwd writes return an error.",
+    name: "exit 1",
+    tag: "error",
+    tagVariant: "red",
+  },
+];
+
+const cliNamingRows: SpecRow[] = [
+  {
+    detail:
+      "Product and app names normalize into kebab-case paths plus PascalCase, camelCase, and title-case identifiers.",
+    name: "Northstar / Customer Ledger",
+    tag: "names",
+    tagVariant: "blue",
+  },
+  {
+    detail:
+      "Command and preference generators require an app scope. The parser accepts dots or slashes, but dotted names are the documented convention.",
+    name: "catalog.refresh",
+    tag: "scoped",
+    tagVariant: "purple",
+  },
+  {
+    detail:
+      "Route names generate src/worker/routes/<name>.ts and a starter pathname of /api/<name>.",
+    name: "worker-route catalog",
+    tag: "edge",
+    tagVariant: "orange",
+  },
+  {
+    detail:
+      "Repository names generate <name>-repository.ts. The starter SQL table stem converts hyphenated names to underscores.",
+    name: "d1-repository customer-ledger",
+    tag: "D1",
+    tagVariant: "cyan",
+  },
+  {
+    detail:
+      "When --dir is used, it replaces the generator default root. It does not add src/apps, src/commands, or src/worker automatically.",
+    name: "--dir src/features",
+    tag: "paths",
+    tagVariant: "teal",
+  },
+];
+
+const cliWorkflowRows: SpecRow[] = [
+  {
+    detail:
+      "Create one host shell entry first. Product routing, registered manifests, and deployment wiring remain product-owned.",
+    name: "ak g shell Northstar",
+    tag: "start",
+    tagVariant: "blue",
+  },
+  {
+    detail:
+      "Use the app generator when a route needs a manifest, lazy activation, first commands, a starter preference, and an Astryx view.",
+    name: "ak g app Catalog",
+    tag: "micro-app",
+    tagVariant: "teal",
+  },
+  {
+    detail:
+      "Move commands and preferences into shared folders when they need direct tests, reuse, or a clearer ownership boundary.",
+    name: "ak g command / preference",
+    tag: "extract",
+    tagVariant: "purple",
+  },
+  {
+    detail:
+      "Generate request and D1 boundaries separately so auth, bindings, schema, tenancy, and route mounting stay explicit.",
+    name: "ak g worker-route / d1-repository",
+    tag: "edge",
+    tagVariant: "orange",
+  },
+  {
+    detail:
+      "Run dry-run before custom directories or force overwrites. Treat generated files as reviewed source code, not disposable output.",
+    name: "--dry-run before --force",
+    tag: "safety",
+    tagVariant: "green",
+  },
+];
+
 const generatorRows: SpecRow[] = [
   {
-    detail: "Creates product-level ShellHost, AstryxKitProvider, ShellFrame, and ShellAppOutlet wiring.",
+    detail:
+      "Creates product-level ShellHost, AstryxKitProvider, ShellFrame, and ShellAppOutlet wiring.",
     name: "ak g shell <product>",
     tag: "src/shell",
     tagVariant: "blue",
   },
   {
-    detail: "Creates a manifest, activation function, default open/refresh commands, sample preference, and first view.",
+    detail:
+      "Creates a manifest, activation function, default open/refresh commands, sample preference, and first view.",
     name: "ak g app <name>",
     tag: "src/apps",
     tagVariant: "teal",
   },
   {
-    detail: "Creates a typed CommandContribution and binder that is safe to attach during app activation.",
+    detail:
+      "Creates a typed CommandContribution and binder that is safe to attach during app activation.",
     name: "ak g command <app>.<name>",
     tag: "src/commands",
     tagVariant: "purple",
   },
   {
-    detail: "Creates a PreferenceSchema with namespaced key, category, label, type, and default value.",
+    detail:
+      "Creates a PreferenceSchema with namespaced key, category, label, type, and default value.",
     name: "ak g preference <app>.<name>",
     tag: "src/preferences",
     tagVariant: "green",
   },
   {
-    detail: "Creates a WorkerRoute module around explicit request context and JSON response helpers.",
+    detail:
+      "Creates a WorkerRoute module around explicit request context and JSON response helpers.",
     name: "ak g worker-route <name>",
     tag: "src/worker/routes",
     tagVariant: "orange",
   },
   {
-    detail: "Creates a typed D1 repository wrapper around binding lookup, prepared statements, and batch helpers.",
+    detail:
+      "Creates a typed D1 repository wrapper around binding lookup, prepared statements, and batch helpers.",
     name: "ak g d1-repository <name>",
     tag: "src/worker/repositories",
     tagVariant: "cyan",
@@ -475,76 +1334,216 @@ const generatorRows: SpecRow[] = [
 
 const apiRows: SpecRow[] = [
   {
-    detail: "Registers manifests, activates micro-app modules, exposes palette/settings/events state, and owns navigation.",
+    detail:
+      "Registers manifests, activates micro-app modules, exposes palette/settings/events state, and owns navigation.",
     name: "ShellHost",
     tag: "core",
     tagVariant: "blue",
   },
   {
-    detail: "The contract for route, owner, commands, preferences, features, entry URL, and lazy app loader.",
+    detail:
+      "The contract for route, owner, commands, preferences, features, entry URL, and lazy app loader.",
     name: "ShellAppManifest",
     tag: "core",
     tagVariant: "teal",
   },
   {
-    detail: "The lower-level registry, context, event bus, and preferences services used by ShellHost.",
+    detail:
+      "The lower-level registry, context, event bus, and preferences services used by ShellHost.",
     name: "ShellSDK",
     tag: "core",
     tagVariant: "purple",
   },
   {
-    detail: "Ranks palette results by command ring, prefix mode, text score, context expression, and recency.",
+    detail:
+      "Ranks palette results by command ring, prefix mode, text score, context expression, and recency.",
     name: "CommandRegistry",
     tag: "core",
     tagVariant: "green",
   },
   {
-    detail: "Resolves platform, product, app, feature, user, and default layers while preserving inspection metadata.",
+    detail:
+      "Resolves platform, product, app, feature, user, and default layers while preserving inspection metadata.",
     name: "PreferencesStore",
     tag: "core",
     tagVariant: "orange",
   },
   {
-    detail: "Renders the Astryx AppShell, top navigation, side app navigation, command trigger, and child outlet.",
+    detail:
+      "Renders the Astryx AppShell, top navigation, side app navigation, command trigger, and child outlet.",
     name: "ShellFrame",
     tag: "react",
     tagVariant: "teal",
   },
   {
-    detail: "Activates the target app and renders its instance through the active route and workspace context.",
+    detail:
+      "Activates the target app and renders its instance through the active route and workspace context.",
     name: "ShellAppOutlet",
     tag: "react",
     tagVariant: "purple",
   },
   {
-    detail: "Builds a compact Worker fetch handler from explicit routes, health check, asset fallback, and not-found handling.",
+    detail:
+      "Builds a compact Worker fetch handler from explicit routes, health check, asset fallback, and not-found handling.",
     name: "createWorkerRouter",
     tag: "worker",
     tagVariant: "green",
   },
 ];
 
+const exportRows: SpecRow[] = [
+  {
+    detail:
+      "Barrel export for the main runtime, React helpers, design provider, and Worker helpers. Use when product bundling benefits from one import.",
+    name: "astryxkit",
+    tag: "root",
+    tagVariant: "blue",
+  },
+  {
+    detail:
+      "ShellHost, manifest types, ShellSDK services, command registry, preferences store, context service, event bus, and import-map helpers.",
+    name: "astryxkit/core",
+    tag: "runtime",
+    tagVariant: "purple",
+  },
+  {
+    detail:
+      "ShellFrame, ShellAppOutlet, ShellCommandPalette, ShellPreferencesPanel, and React hooks for commands, context, settings, and host state.",
+    name: "astryxkit/react",
+    tag: "ui",
+    tagVariant: "teal",
+  },
+  {
+    detail:
+      "AstryxKitProvider, astryxKitTheme, appearance storage helpers, and appearance mode types.",
+    name: "astryxkit/design-system",
+    tag: "theme",
+    tagVariant: "green",
+  },
+  {
+    detail:
+      "JSON responses, defensive body parsing, Worker router, redirect helper, health response, and D1 binding/statement helpers.",
+    name: "astryxkit/worker",
+    tag: "edge",
+    tagVariant: "orange",
+  },
+];
+
+const generatedContractRows: SpecRow[] = [
+  {
+    detail:
+      "Generated shell files own product-level wiring only. Register real app manifests and route selection in product code.",
+    name: "shell",
+    tag: "host",
+    tagVariant: "blue",
+  },
+  {
+    detail:
+      "Generated app files include a manifest, activation function, default open/refresh commands, sample preference, and first view.",
+    name: "app",
+    tag: "micro-app",
+    tagVariant: "teal",
+  },
+  {
+    detail:
+      "Generated command files declare the CommandContribution and a binder. Replace the stub handler with product behavior.",
+    name: "command",
+    tag: "commands",
+    tagVariant: "purple",
+  },
+  {
+    detail:
+      "Generated preference files establish the namespaced key, category, label, default, type, and optional migration location.",
+    name: "preference",
+    tag: "settings",
+    tagVariant: "green",
+  },
+  {
+    detail:
+      "Generated Worker routes expose WorkerRequestContext and JSON helpers. They do not choose auth, rate limits, or bindings.",
+    name: "worker-route",
+    tag: "edge",
+    tagVariant: "orange",
+  },
+  {
+    detail:
+      "Generated D1 repositories wrap a named binding and prepared statements. They do not define migrations or tenancy policy.",
+    name: "d1-repository",
+    tag: "data",
+    tagVariant: "cyan",
+  },
+];
+
+const troubleshootingRows: SpecRow[] = [
+  {
+    detail:
+      "Check that the manifest is registered before ShellAppOutlet renders and that appId matches the manifest id exactly.",
+    name: "App module unavailable",
+    tag: "activation",
+    tagVariant: "blue",
+  },
+  {
+    detail:
+      "Commands must be declared before binding. App commands also need namespaced ids like catalog.refresh.",
+    name: "Cannot bind unknown command",
+    tag: "commands",
+    tagVariant: "purple",
+  },
+  {
+    detail:
+      "Use context.shell from activate(context), pass an explicit shell to ShellHost, or avoid creating a second ShellSDK instance.",
+    name: "Second shell instance",
+    tag: "runtime",
+    tagVariant: "teal",
+  },
+  {
+    detail:
+      "Confirm the key was declared, the value matches the primitive type, and enum values are listed in options.",
+    name: "Preference rejected",
+    tag: "settings",
+    tagVariant: "green",
+  },
+  {
+    detail:
+      "Routes match exact string paths or regexes. Method filters are exact and omitted methods accept any request method.",
+    name: "Worker route missed",
+    tag: "edge",
+    tagVariant: "orange",
+  },
+  {
+    detail:
+      "D1 helpers deliberately fail at the repository boundary when the requested env binding is missing or not D1-like.",
+    name: "Missing D1 binding",
+    tag: "D1",
+    tagVariant: "cyan",
+  },
+];
+
 const workerRows: SpecRow[] = [
   {
-    detail: "Returns JSON with the correct content type and an explicit ResponseInit boundary.",
+    detail:
+      "Returns JSON with the correct content type and an explicit ResponseInit boundary.",
     name: "json",
     tag: "HTTP",
     tagVariant: "blue",
   },
   {
-    detail: "Parses request JSON defensively and returns an empty object for malformed or non-object bodies.",
+    detail:
+      "Parses request JSON defensively and returns an empty object for malformed or non-object bodies.",
     name: "readJsonObject",
     tag: "HTTP",
     tagVariant: "teal",
   },
   {
-    detail: "Matches exact strings or regular expressions and passes URL, params, env, ctx, and request to handlers.",
+    detail:
+      "Matches exact strings or regular expressions and passes URL, params, env, ctx, and request to handlers.",
     name: "WorkerRoute",
     tag: "Routing",
     tagVariant: "purple",
   },
   {
-    detail: "Guards D1 binding lookup so missing or misnamed bindings fail at the repository boundary.",
+    detail:
+      "Guards D1 binding lookup so missing or misnamed bindings fail at the repository boundary.",
     name: "requireD1Database",
     tag: "D1",
     tagVariant: "green",
@@ -589,64 +1588,203 @@ const cloudflareLinks: LinkRow[] = [
   },
 ];
 
-function TopNavigation() {
+function TopNavigation({
+  activePage,
+  onSearchQueryChange,
+  searchQuery,
+}: {
+  activePage: DocsPageId;
+  onSearchQueryChange: (query: string) => void;
+  searchQuery: string;
+}) {
+  const searchResults = useMemo(
+    () => searchDocsSections(searchQuery),
+    [searchQuery],
+  );
+
   return (
     <TopNav
+      xstyle={styles.topNavStripe}
       label="AstryxKit documentation"
       heading={
         <TopNavHeading
           logo={<Icon icon="wrench" color="accent" />}
           heading="AstryxKit"
           subheading="Framework docs"
-          headingHref="#overview"
+          headingHref="#/overview"
         />
       }
       startContent={
         <>
-          <TopNavItem label="Overview" href="#overview" isSelected />
-          <TopNavItem label="Quickstart" href="#quickstart" />
-          <TopNavItem label="Runtime" href="#lifecycle" />
-          <TopNavItem label="CLI" href="#cli" />
-          <TopNavItem label="Reference" href="#reference" />
+          {topNavigationItems.map((item) => (
+            <TopNavItem
+              key={item.label}
+              label={item.label}
+              href={item.href}
+              isSelected={item.pageId === activePage}
+            />
+          ))}
         </>
       }
       endContent={
-        <Button
-          label="GitHub"
-          href="https://github.com/thedjpetersen/astryxkit"
-          target="_blank"
-          rel="noreferrer"
-          variant="ghost"
-          icon={<Icon icon="externalLink" size="sm" />}
-        />
+        <section {...stylex.props(styles.topNavActions)}>
+          <DocsQuickFind
+            query={searchQuery}
+            results={searchResults}
+            onQueryChange={onSearchQueryChange}
+          />
+          <Button
+            label="GitHub"
+            href="https://github.com/thedjpetersen/astryxkit"
+            target="_blank"
+            rel="noreferrer"
+            variant="ghost"
+            icon={<Icon icon="externalLink" size="sm" />}
+          />
+        </section>
       }
     />
   );
 }
 
-function SideNavigation() {
+function DocsQuickFind({
+  onQueryChange,
+  query,
+  results,
+}: {
+  onQueryChange: (query: string) => void;
+  query: string;
+  results: DocsSection[];
+}) {
+  const hasQuery = query.trim().length > 0;
+
   return (
-    <SideNav>
-      <SideNavSection title="Start">
-        <SideNavItem label="Overview" href="#overview" icon="info" isSelected />
-        <SideNavItem label="Install" href="#install" icon="copy" />
-        <SideNavItem label="Quickstart" href="#quickstart" icon="chevronRight" />
-      </SideNavSection>
-      <SideNavSection title="Concepts">
-        <SideNavItem label="Framework map" href="#framework-map" icon="viewColumns" />
-        <SideNavItem label="Runtime lifecycle" href="#lifecycle" icon="clock" />
-        <SideNavItem label="Commands" href="#commands" icon="search" />
-        <SideNavItem label="Preferences" href="#preferences" icon="wrench" />
-        <SideNavItem label="React shell" href="#react" icon="menu" />
-        <SideNavItem label="Design system" href="#design-system" icon="checkDouble" />
-      </SideNavSection>
-      <SideNavSection title="Build">
-        <SideNavItem label="CLI" href="#cli" icon="menu" />
-        <SideNavItem label="Generators" href="#generators" icon="copy" />
-        <SideNavItem label="Workers" href="#workers" icon="externalLink" />
-        <SideNavItem label="API reference" href="#reference" icon="check" />
-        <SideNavItem label="Ship checklist" href="#ship" icon="success" />
-      </SideNavSection>
+    <section {...stylex.props(styles.quickFind)} role="search">
+      <TextInput
+        label="Search docs"
+        isLabelHidden
+        value={query}
+        onChange={onQueryChange}
+        placeholder="Search docs"
+        startIcon="search"
+        hasClear
+        htmlName="docsSearch"
+        size="sm"
+        width="100%"
+      />
+      {hasQuery ? (
+        <section
+          {...stylex.props(styles.quickFindResults)}
+          aria-label="Docs search results"
+          aria-live="polite"
+        >
+          {results.length > 0 ? (
+            <ul {...stylex.props(styles.quickFindList)}>
+              {results.map((result) => (
+                <li key={result.id} {...stylex.props(styles.quickFindItem)}>
+                  <Link
+                    href={createDocsHref(result.pageId, result.id)}
+                    isStandalone
+                    onClick={() => onQueryChange("")}
+                  >
+                    {result.label}
+                  </Link>
+                  <Text
+                    as="p"
+                    display="block"
+                    type="supporting"
+                    color="secondary"
+                  >
+                    {result.summary}
+                  </Text>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <section {...stylex.props(styles.quickFindEmpty)}>
+              <Text as="p" display="block" color="secondary">
+                No matching docs sections.
+              </Text>
+            </section>
+          )}
+        </section>
+      ) : null}
+    </section>
+  );
+}
+
+function searchDocsSections(query: string): DocsSection[] {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return [];
+  }
+
+  return docsSections
+    .map((section) => {
+      const label = section.label.toLowerCase();
+      const id = section.id.toLowerCase();
+      const summary = section.summary.toLowerCase();
+      const group = section.group.toLowerCase();
+      let score = 0;
+
+      if (label.startsWith(normalizedQuery)) {
+        score += 20;
+      }
+
+      if (label.includes(normalizedQuery)) {
+        score += 12;
+      }
+
+      if (id.includes(normalizedQuery)) {
+        score += 8;
+      }
+
+      if (group.includes(normalizedQuery)) {
+        score += 4;
+      }
+
+      if (summary.includes(normalizedQuery)) {
+        score += 3;
+      }
+
+      return { section, score };
+    })
+    .filter((result) => result.score > 0)
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        docsSectionIds.indexOf(a.section.id) -
+          docsSectionIds.indexOf(b.section.id),
+    )
+    .slice(0, 6)
+    .map((result) => result.section);
+}
+
+function SideNavigation({ activeSection }: { activeSection: string }) {
+  return (
+    <SideNav xstyle={styles.sideNavStripe}>
+      {docsSectionGroups.map((group) => (
+        <SideNavSection key={group.title} title={group.title}>
+          {group.ids.map((id) => {
+            const section = docsSections.find((item) => item.id === id);
+
+            if (!section) {
+              return null;
+            }
+
+            return (
+              <SideNavItem
+                key={section.id}
+                label={section.label}
+                href={createDocsHref(section.pageId, section.id)}
+                icon={section.icon}
+                isSelected={activeSection === section.id}
+              />
+            );
+          })}
+        </SideNavSection>
+      ))}
     </SideNav>
   );
 }
@@ -655,15 +1793,19 @@ function DocsHero() {
   return (
     <section id="overview" {...stylex.props(styles.heroBand)}>
       <article {...stylex.props(styles.hero)}>
-        <section {...stylex.props(styles.heroCopy)} aria-labelledby="hero-title">
+        <section
+          {...stylex.props(styles.heroCopy)}
+          aria-labelledby="hero-title"
+        >
           <HStack gap={2} wrap="wrap">
             <Badge variant="neutral" label="Micro-app shell" />
             <Badge variant="neutral" label="Command runtime" />
             <Badge variant="neutral" label="Worker boundary" />
           </HStack>
           <VStack gap={4}>
-            <Heading level={1} type="display-2" id="hero-title">
-              The framework layer for Astryx products that need to scale past one app.
+            <Heading level={1} type="display-3" id="hero-title">
+              The framework layer for Astryx products that need to scale past
+              one app.
             </Heading>
             <Text as="p" type="large" display="block" color="secondary">
               AstryxKit gives host products a shared shell runtime, React frame,
@@ -672,16 +1814,19 @@ function DocsHero() {
               product routes or infrastructure.
             </Text>
           </VStack>
-          <section {...stylex.props(styles.actionRow)} aria-label="Primary actions">
+          <section
+            {...stylex.props(styles.actionRow)}
+            aria-label="Primary actions"
+          >
             <Button
               label="Start quickstart"
-              href="#quickstart"
+              href="#/quickstart/quickstart"
               variant="primary"
               icon={<Icon icon="chevronRight" size="sm" />}
             />
             <Button
               label="Browse reference"
-              href="#reference"
+              href="#/reference/reference"
               variant="secondary"
               icon={<Icon icon="search" size="sm" />}
             />
@@ -696,7 +1841,10 @@ function DocsHero() {
           </section>
         </section>
 
-        <aside {...stylex.props(styles.systemFrame)} aria-label="AstryxKit system map">
+        <aside
+          {...stylex.props(styles.systemFrame)}
+          aria-label="AstryxKit system map"
+        >
           <header {...stylex.props(styles.systemHeader)}>
             <HStack gap={1.5} align="center">
               <span {...stylex.props(styles.statusDot)} />
@@ -830,7 +1978,10 @@ function Install() {
     <Band id="install">
       <section {...stylex.props(styles.installStrip)}>
         <section {...stylex.props(styles.copyBlock)}>
-          <SectionHeader badge="Install" title="Install the framework, keep peers explicit.">
+          <SectionHeader
+            badge="Install"
+            title="Install the framework, keep peers explicit."
+          >
             AstryxKit depends on the host product for React, Astryx Core, and
             StyleX. That keeps product shells aligned with the application
             runtime they already own.
@@ -848,6 +1999,7 @@ function Install() {
           language="bash"
           code={installSnippet}
           width="100%"
+          xstyle={styles.codeBlockStripe}
           isWrapped
         />
       </section>
@@ -860,7 +2012,10 @@ function Quickstart() {
     <Band id="quickstart" muted>
       <section {...stylex.props(styles.guideGrid)}>
         <section {...stylex.props(styles.copyBlock)}>
-          <SectionHeader badge="Quickstart" title="Create a shell, register an app, render the outlet.">
+          <SectionHeader
+            badge="Quickstart"
+            title="Create a shell, register an app, render the outlet."
+          >
             The first useful integration is small: construct a host, register a
             manifest, and let the React shell activate the app for the current
             route.
@@ -889,7 +2044,9 @@ function Quickstart() {
             language="tsx"
             code={shellSnippet}
             width="100%"
+            xstyle={styles.codeBlockStripe}
             isWrapped
+            hasLineNumbers
             maxHeight={620}
             highlightLines={[4, 5, 10, 15]}
           />
@@ -898,7 +2055,9 @@ function Quickstart() {
             language="ts"
             code={manifestSnippet}
             width="100%"
+            xstyle={styles.codeBlockStripe}
             isWrapped
+            hasLineNumbers
             maxHeight={560}
           />
         </aside>
@@ -934,7 +2093,10 @@ function Step({
 function FrameworkMap() {
   return (
     <Band id="framework-map">
-      <SectionHeader badge="Framework map" title="Four package surfaces, one product contract.">
+      <SectionHeader
+        badge="Framework map"
+        title="Four package surfaces, one product contract."
+      >
         Each export maps to a stable ownership boundary. The runtime is not a
         page builder; it is the contract that lets independently owned app
         modules behave like one product.
@@ -948,12 +2110,108 @@ function FrameworkMap() {
   );
 }
 
+function ArchitectureModel() {
+  return (
+    <Band id="architecture" muted>
+      <section {...stylex.props(styles.referenceSplit)}>
+        <section {...stylex.props(styles.copyBlock)}>
+          <SectionHeader
+            badge="Architecture"
+            title="Ownership boundaries are the primary API."
+          >
+            The framework is useful because it keeps responsibilities explicit:
+            product apps own product policy, the shell owns cross-app runtime
+            behavior, and micro-apps contribute capabilities through typed
+            contracts.
+          </SectionHeader>
+          <section {...stylex.props(styles.notePanel)}>
+            <Text as="p" display="block" color="secondary">
+              Use this model when deciding where code belongs. If a decision
+              depends on a customer, workspace, deployment, binding, schema, or
+              authorization policy, it belongs to the host product, not
+              AstryxKit.
+            </Text>
+          </section>
+        </section>
+        <SpecTable caption="Ownership model" rows={architectureRows} />
+      </section>
+    </Band>
+  );
+}
+
+function ProjectLayout() {
+  return (
+    <Band id="project-layout">
+      <section {...stylex.props(styles.guideGrid)}>
+        <section {...stylex.props(styles.copyBlock)}>
+          <SectionHeader
+            badge="Project layout"
+            title="Keep generated seams close to the code that owns them."
+          >
+            A host product should be easy to scan: shell wiring at the top,
+            micro-app contracts in app folders, reusable command and preference
+            modules where they need tests, and Worker code at the request
+            boundary.
+          </SectionHeader>
+          <SpecTable
+            caption="Recommended file ownership"
+            rows={projectLayoutRows}
+          />
+        </section>
+        <CodeBlock
+          title="product-layout"
+          language="text"
+          code={projectLayoutSnippet}
+          width="100%"
+          xstyle={styles.codeBlockStripe}
+          isWrapped
+          hasLineNumbers
+          maxHeight={520}
+        />
+      </section>
+    </Band>
+  );
+}
+
+function ManifestContract() {
+  return (
+    <Band id="manifests">
+      <section {...stylex.props(styles.guideGrid)}>
+        <section {...stylex.props(styles.copyBlock)}>
+          <SectionHeader
+            badge="Manifests"
+            title="A manifest is the app contract the host can understand before loading code."
+          >
+            The host registers manifests up front, which makes navigation,
+            palette search, settings, and feature state available without
+            eagerly importing every micro-app module.
+          </SectionHeader>
+          <SpecTable caption="ShellAppManifest fields" rows={manifestRows} />
+        </section>
+        <CodeBlock
+          title="manifest.ts"
+          language="ts"
+          code={manifestSnippet}
+          width="100%"
+          xstyle={styles.codeBlockStripe}
+          isWrapped
+          hasLineNumbers
+          maxHeight={620}
+        />
+      </section>
+    </Band>
+  );
+}
+
 function RuntimeLifecycle() {
   return (
     <Band id="lifecycle" muted>
       <section {...stylex.props(styles.referenceSplit)}>
         <section {...stylex.props(styles.copyBlock)}>
-          <SectionHeader badge="Runtime" title="The host lifecycle is explicit by design.">
+          <SectionHeader
+            badge="Runtime"
+            title="The host lifecycle is explicit by design."
+          >
             AstryxKit keeps the expensive and stateful parts of a shell product
             in one place: registering apps, activating modules, binding
             commands, resolving preferences, and disposing app-scoped resources.
@@ -969,7 +2227,43 @@ function RuntimeLifecycle() {
           language="tsx"
           code={activationSnippet}
           width="100%"
+          xstyle={styles.codeBlockStripe}
           isWrapped
+          hasLineNumbers
+          maxHeight={620}
+          highlightLines={[4, 5, 13]}
+        />
+      </section>
+    </Band>
+  );
+}
+
+function ActivationContext() {
+  return (
+    <Band id="activation-context">
+      <section {...stylex.props(styles.guideGrid)}>
+        <section {...stylex.props(styles.copyBlock)}>
+          <SectionHeader
+            badge="Activation"
+            title="Activation is where lazy app code becomes shell behavior."
+          >
+            Register long-lived handlers, event listeners, and dynamic command
+            sources through the activation context. The host disposes that work
+            when the active app changes.
+          </SectionHeader>
+          <SpecTable
+            caption="ShellAppActivationContext"
+            rows={activationRows}
+          />
+        </section>
+        <CodeBlock
+          title="activate.tsx"
+          language="tsx"
+          code={activationSnippet}
+          width="100%"
+          xstyle={styles.codeBlockStripe}
+          isWrapped
+          hasLineNumbers
           maxHeight={620}
           highlightLines={[4, 5, 13]}
         />
@@ -983,7 +2277,10 @@ function Commands() {
     <Band id="commands">
       <section {...stylex.props(styles.guideGrid)}>
         <section {...stylex.props(styles.copyBlock)}>
-          <SectionHeader badge="Commands" title="Commands are the framework extension point.">
+          <SectionHeader
+            badge="Commands"
+            title="Commands are the framework extension point."
+          >
             Apps declare commands early, bind handlers when activated, and let
             the shared palette rank results by ring, prefix, context, text
             score, and recency.
@@ -1001,25 +2298,29 @@ function Commands() {
                 name: ">",
                 tag: "Actions",
                 tagVariant: "blue",
-                detail: "Filters to action commands such as refresh, save, rebuild, or approve.",
+                detail:
+                  "Filters to action commands such as refresh, save, rebuild, or approve.",
               },
               {
                 name: "/",
                 tag: "Pages",
                 tagVariant: "teal",
-                detail: "Filters to route or href commands for navigation surfaces.",
+                detail:
+                  "Filters to route or href commands for navigation surfaces.",
               },
               {
                 name: "@",
                 tag: "Entities",
                 tagVariant: "purple",
-                detail: "Filters to entity commands for records, people, accounts, or other addressable objects.",
+                detail:
+                  "Filters to entity commands for records, people, accounts, or other addressable objects.",
               },
               {
                 name: "?",
                 tag: "Help",
                 tagVariant: "green",
-                detail: "Filters help-oriented commands and documentation entries.",
+                detail:
+                  "Filters help-oriented commands and documentation entries.",
               },
             ]}
           />
@@ -1029,7 +2330,9 @@ function Commands() {
           language="ts"
           code={commandSnippet}
           width="100%"
+          xstyle={styles.codeBlockStripe}
           isWrapped
+          hasLineNumbers
           maxHeight={520}
         />
       </section>
@@ -1043,7 +2346,10 @@ function CommandLab() {
   const results = useMemo(() => rankDemoCommands(query, mode), [mode, query]);
 
   return (
-    <section {...stylex.props(styles.interactivePanel)} aria-labelledby="command-lab-title">
+    <section
+      {...stylex.props(styles.interactivePanel)}
+      aria-labelledby="command-lab-title"
+    >
       <header {...stylex.props(styles.interactiveHeader)}>
         <section {...stylex.props(styles.interactiveTitle)}>
           <Badge variant="neutral" label="Live model" />
@@ -1069,7 +2375,10 @@ function CommandLab() {
           hasClear
           width="100%"
         />
-        <section {...stylex.props(styles.modeButtons)} aria-label="Command prefix modes">
+        <section
+          {...stylex.props(styles.modeButtons)}
+          aria-label="Command prefix modes"
+        >
           {commandModes.map((item) => (
             <Button
               key={item.id}
@@ -1102,7 +2411,11 @@ function CommandLab() {
                     <HStack gap={1.5} align="center" wrap="wrap">
                       <Badge variant="neutral" label={command.ring} />
                       <Badge variant="neutral" label={command.kind} />
-                      <Text type="supporting" color="secondary" hasTabularNumbers>
+                      <Text
+                        type="supporting"
+                        color="secondary"
+                        hasTabularNumbers
+                      >
                         score {command.score}
                       </Text>
                     </HStack>
@@ -1113,7 +2426,9 @@ function CommandLab() {
                   {command.when || command.shortcut ? (
                     <footer {...stylex.props(styles.resultMeta)}>
                       {command.when ? <Code>{command.when}</Code> : null}
-                      {command.shortcut ? <Code>{command.shortcut}</Code> : null}
+                      {command.shortcut ? (
+                        <Code>{command.shortcut}</Code>
+                      ) : null}
                     </footer>
                   ) : null}
                 </section>
@@ -1132,7 +2447,10 @@ function CommandLab() {
   );
 }
 
-function rankDemoCommands(query: string, modeId: CommandModeId): RankedDemoCommand[] {
+function rankDemoCommands(
+  query: string,
+  modeId: CommandModeId,
+): RankedDemoCommand[] {
   const mode = commandModes.find((item) => item.id === modeId);
   const parsed = parseCommandQuery(query);
   const normalizedQuery = parsed.query;
@@ -1142,7 +2460,9 @@ function rankDemoCommands(query: string, modeId: CommandModeId): RankedDemoComma
     .filter((command) => (activeKind ? command.kind === activeKind : true))
     .map((command) => {
       const baseScore =
-        ringWeights[command.ring] + kindWeights[command.kind] + (command.when ? 1 : 0);
+        ringWeights[command.ring] +
+        kindWeights[command.kind] +
+        (command.when ? 1 : 0);
       const textScore = scoreCommandText(command, normalizedQuery);
 
       return {
@@ -1161,9 +2481,14 @@ function rankDemoCommands(query: string, modeId: CommandModeId): RankedDemoComma
     }));
 }
 
-function parseCommandQuery(query: string): { kind?: CommandKind; query: string } {
+function parseCommandQuery(query: string): {
+  kind?: CommandKind;
+  query: string;
+} {
   const trimmed = query.trimStart();
-  const mode = commandModes.find((item) => item.prefix && trimmed.startsWith(item.prefix));
+  const mode = commandModes.find(
+    (item) => item.prefix && trimmed.startsWith(item.prefix),
+  );
 
   if (!mode) {
     return { query: query.trim().toLowerCase() };
@@ -1224,17 +2549,35 @@ function Preferences() {
     <Band id="preferences" muted>
       <section {...stylex.props(styles.referenceSplit)}>
         <section {...stylex.props(styles.copyBlock)}>
-          <SectionHeader badge="Preferences" title="Preference resolution is layered, inspectable, and reversible.">
+          <SectionHeader
+            badge="Preferences"
+            title="Preference resolution is layered, inspectable, and reversible."
+          >
             Preferences resolve through scoped records instead of ad hoc product
             state. The store preserves where a value came from, whether it was
             inherited, and whether a user override exists.
           </SectionHeader>
           <ol {...stylex.props(styles.layerStack)}>
-            <Layer label="Feature" body="Highest seed scope for feature-specific defaults when a feature context is active." />
-            <Layer label="App" body="Application-level defaults and user overrides for a micro-app." />
-            <Layer label="Product" body="Host-product defaults shared across registered apps." />
-            <Layer label="Platform" body="Platform-wide defaults keyed by platformId." />
-            <Layer label="Default" body="Schema defaultValue when no scoped record exists." />
+            <Layer
+              label="Feature"
+              body="Highest seed scope for feature-specific defaults when a feature context is active."
+            />
+            <Layer
+              label="App"
+              body="Application-level defaults and user overrides for a micro-app."
+            />
+            <Layer
+              label="Product"
+              body="Host-product defaults shared across registered apps."
+            />
+            <Layer
+              label="Platform"
+              body="Platform-wide defaults keyed by platformId."
+            />
+            <Layer
+              label="Default"
+              body="Schema defaultValue when no scoped record exists."
+            />
           </ol>
           <section {...stylex.props(styles.notePanel)}>
             <Text as="p" display="block" color="secondary">
@@ -1249,7 +2592,9 @@ function Preferences() {
           language="ts"
           code={preferenceSnippet}
           width="100%"
+          xstyle={styles.codeBlockStripe}
           isWrapped
+          hasLineNumbers
           maxHeight={560}
         />
       </section>
@@ -1270,12 +2615,61 @@ function Layer({ body, label }: { body: string; label: string }) {
   );
 }
 
+function RuntimeState() {
+  return (
+    <Band id="events">
+      <section {...stylex.props(styles.guideGrid)}>
+        <section {...stylex.props(styles.copyBlock)}>
+          <SectionHeader
+            badge="Context and events"
+            title="Runtime state is explicit, typed at the boundary, and observable."
+          >
+            Context keys decide command and preference visibility. Events are
+            lightweight diagnostics and coordination points; the host records
+            only the event types it was asked to track.
+          </SectionHeader>
+          <SpecTable caption="Context service" rows={contextRows} />
+          <SpecTable caption="Event bus" rows={eventRows} />
+        </section>
+        <aside
+          {...stylex.props(styles.codeStack)}
+          aria-label="Context and events examples"
+        >
+          <CodeBlock
+            title="context.ts"
+            language="tsx"
+            code={contextSnippet}
+            width="100%"
+            xstyle={styles.codeBlockStripe}
+            isWrapped
+            hasLineNumbers
+            maxHeight={420}
+          />
+          <CodeBlock
+            title="events.ts"
+            language="ts"
+            code={eventsSnippet}
+            width="100%"
+            xstyle={styles.codeBlockStripe}
+            isWrapped
+            hasLineNumbers
+            maxHeight={460}
+          />
+        </aside>
+      </section>
+    </Band>
+  );
+}
+
 function ReactShell() {
   return (
     <Band id="react">
       <section {...stylex.props(styles.referenceSplit)}>
         <section {...stylex.props(styles.copyBlock)}>
-          <SectionHeader badge="React" title="Shell UI is shared, app surfaces stay local.">
+          <SectionHeader
+            badge="React"
+            title="Shell UI is shared, app surfaces stay local."
+          >
             The React package gives products a working app shell without
             dictating page content. App teams render through their own
             activation instance; the shell owns common navigation, palette, and
@@ -1288,25 +2682,29 @@ function ReactShell() {
                 name: "ShellFrame",
                 tag: "Frame",
                 tagVariant: "blue",
-                detail: "TopNav, SideNav, command trigger, app navigation, and content outlet composition.",
+                detail:
+                  "TopNav, SideNav, command trigger, app navigation, and content outlet composition.",
               },
               {
                 name: "ShellAppOutlet",
                 tag: "Activation",
                 tagVariant: "teal",
-                detail: "Activates the app for a route and renders the active instance with workspace and navigation context.",
+                detail:
+                  "Activates the app for a route and renders the active instance with workspace and navigation context.",
               },
               {
                 name: "ShellCommandPalette",
                 tag: "Palette",
                 tagVariant: "purple",
-                detail: "Searches, drills into child commands, executes handlers, and records recent actions.",
+                detail:
+                  "Searches, drills into child commands, executes handlers, and records recent actions.",
               },
               {
                 name: "ShellPreferencesPanel",
                 tag: "Settings",
                 tagVariant: "green",
-                detail: "Groups visible settings by ring and exposes resolved source details to users.",
+                detail:
+                  "Groups visible settings by ring and exposes resolved source details to users.",
               },
             ]}
           />
@@ -1316,7 +2714,9 @@ function ReactShell() {
           language="tsx"
           code={reactSnippet}
           width="100%"
+          xstyle={styles.codeBlockStripe}
           isWrapped
+          hasLineNumbers
           maxHeight={500}
         />
       </section>
@@ -1329,7 +2729,10 @@ function DesignSystem() {
     <Band id="design-system" muted>
       <section {...stylex.props(styles.guideGrid)}>
         <section {...stylex.props(styles.copyBlock)}>
-          <SectionHeader badge="Design system" title="Use Astryx primitives, then raise the composition with StyleX.">
+          <SectionHeader
+            badge="Design system"
+            title="Use Astryx primitives, then raise the composition with StyleX."
+          >
             Controls, text, navigation, shell layout, and code examples should
             come from Astryx. Higher-order documentation surfaces should be
             authored in StyleX using tokens, not pastel component variants.
@@ -1354,7 +2757,9 @@ function DesignSystem() {
           language="tsx"
           code={designSnippet}
           width="100%"
+          xstyle={styles.codeBlockStripe}
           isWrapped
+          hasLineNumbers
           maxHeight={460}
         />
       </section>
@@ -1381,15 +2786,18 @@ function Cli() {
     <Band id="cli">
       <section {...stylex.props(styles.referenceSplit)}>
         <section {...stylex.props(styles.copyBlock)}>
-          <SectionHeader badge="CLI" title="Rails-like generators for stable framework seams.">
+          <SectionHeader
+            badge="CLI"
+            title="Rails-like generators for stable framework seams."
+          >
             The <Code>ak</Code> CLI creates the repeated extension points a
             shell product needs. It intentionally stops before product routing,
             Cloudflare binding configuration, migrations, and deployment policy.
           </SectionHeader>
           <section {...stylex.props(styles.actionRow)} aria-label="CLI actions">
             <Button
-              label="Generator reference"
-              href="#generators"
+              label="Command reference"
+              href="#/build/cli-reference"
               variant="primary"
               icon={<Icon icon="chevronRight" size="sm" />}
             />
@@ -1408,8 +2816,87 @@ function Cli() {
           language="bash"
           code={generatorSnippet}
           width="100%"
+          xstyle={styles.codeBlockStripe}
           isWrapped
+          hasLineNumbers
           maxHeight={520}
+        />
+      </section>
+    </Band>
+  );
+}
+
+function CliReference() {
+  return (
+    <Band id="cli-reference" muted>
+      <section {...stylex.props(styles.referenceSplit)}>
+        <section {...stylex.props(styles.copyBlock)}>
+          <SectionHeader
+            badge="CLI reference"
+            title="The ak command surface is intentionally small."
+          >
+            The command parser accepts root help and version commands, a
+            generator list command, and one write path: <Code>generate</Code> or
+            <Code>g</Code>. Generator writes print stable action rows so output
+            can be reviewed in CI logs.
+          </SectionHeader>
+          <SpecTable caption="Commands" rows={cliCommandRows} />
+          <SpecTable caption="Options" rows={cliOptionRows} />
+          <SpecTable caption="Result actions" rows={cliActionRows} />
+        </section>
+        <aside
+          {...stylex.props(styles.codeStack)}
+          aria-label="CLI reference examples"
+        >
+          <CodeBlock
+            title="ak-reference"
+            language="bash"
+            code={cliReferenceSnippet}
+            width="100%"
+            xstyle={styles.codeBlockStripe}
+            isWrapped
+            hasLineNumbers
+            maxHeight={460}
+          />
+          <CodeBlock
+            title="stdout"
+            language="text"
+            code={cliOutputSnippet}
+            width="100%"
+            xstyle={styles.codeBlockStripe}
+            isWrapped
+          />
+        </aside>
+      </section>
+    </Band>
+  );
+}
+
+function CliWorkflows() {
+  return (
+    <Band id="cli-workflows">
+      <section {...stylex.props(styles.guideGrid)}>
+        <section {...stylex.props(styles.copyBlock)}>
+          <SectionHeader
+            badge="CLI workflows"
+            title="Generate framework seams in the order users will own them."
+          >
+            Start with shell wiring, add app manifests, then extract commands,
+            preferences, Worker routes, and D1 repositories when those seams
+            need tests or independent ownership.
+          </SectionHeader>
+          <SpecTable caption="Recommended workflow" rows={cliWorkflowRows} />
+          <SpecTable caption="Naming and paths" rows={cliNamingRows} />
+        </section>
+        <CodeBlock
+          title="scaffold-flow"
+          language="bash"
+          code={cliWorkflowSnippet}
+          width="100%"
+          xstyle={styles.codeBlockStripe}
+          isWrapped
+          hasLineNumbers
+          maxHeight={560}
         />
       </section>
     </Band>
@@ -1421,7 +2908,10 @@ function Generators() {
     <Band id="generators" muted>
       <section {...stylex.props(styles.guideGrid)}>
         <section {...stylex.props(styles.copyBlock)}>
-          <SectionHeader badge="Generators" title="Generate the next correct file, not an entire product.">
+          <SectionHeader
+            badge="Generators"
+            title="Generate the next correct file, not an entire product."
+          >
             Generators create typed first drafts around framework concepts. The
             output is meant to be read, edited, committed, and owned by the host
             application.
@@ -1440,12 +2930,48 @@ function Generators() {
   );
 }
 
+function GeneratedContracts() {
+  return (
+    <Band id="generated-contracts">
+      <section {...stylex.props(styles.referenceSplit)}>
+        <section {...stylex.props(styles.copyBlock)}>
+          <SectionHeader
+            badge="Generated contracts"
+            title="Generated files are starting contracts, not hidden architecture."
+          >
+            Each generator creates the smallest useful file at a stable
+            framework boundary. Product decisions should be filled in after
+            generation rather than encoded into the generator.
+          </SectionHeader>
+          <SpecTable
+            caption="Generator file contracts"
+            rows={generatedContractRows}
+          />
+        </section>
+        <CodeBlock
+          title="generated-command.ts"
+          language="ts"
+          code={generatedContractSnippet}
+          width="100%"
+          xstyle={styles.codeBlockStripe}
+          isWrapped
+          hasLineNumbers
+          maxHeight={520}
+        />
+      </section>
+    </Band>
+  );
+}
+
 function Workers() {
   return (
     <Band id="workers">
       <section {...stylex.props(styles.guideGrid)}>
         <section {...stylex.props(styles.copyBlock)}>
-          <SectionHeader badge="Workers" title="Worker helpers stay small so infrastructure stays honest.">
+          <SectionHeader
+            badge="Workers"
+            title="Worker helpers stay small so infrastructure stays honest."
+          >
             AstryxKit provides request-boundary helpers, not a platform
             abstraction. Host apps still own bindings, schema, migrations,
             deployment topology, limits, and product-specific data access.
@@ -1462,7 +2988,9 @@ function Workers() {
             language="ts"
             code={workerSnippet}
             width="100%"
+            xstyle={styles.codeBlockStripe}
             isWrapped
+            hasLineNumbers
             maxHeight={420}
           />
           <CodeBlock
@@ -1470,10 +2998,70 @@ function Workers() {
             language="ts"
             code={d1Snippet}
             width="100%"
+            xstyle={styles.codeBlockStripe}
             isWrapped
+            hasLineNumbers
             maxHeight={560}
           />
         </aside>
+      </section>
+    </Band>
+  );
+}
+
+function ExportMap() {
+  return (
+    <Band id="export-map" muted>
+      <section {...stylex.props(styles.guideGrid)}>
+        <section {...stylex.props(styles.copyBlock)}>
+          <SectionHeader
+            badge="Export map"
+            title="Choose imports by ownership boundary."
+          >
+            The package entrypoints are deliberately narrow. Use the entrypoint
+            that matches the layer you are editing so runtime code, UI code,
+            design wrapper code, and Worker helpers stay easy to audit.
+          </SectionHeader>
+          <SpecTable caption="Package entrypoints" rows={exportRows} />
+        </section>
+        <CodeBlock
+          title="imports.ts"
+          language="ts"
+          code={exportMapSnippet}
+          width="100%"
+          xstyle={styles.codeBlockStripe}
+          isWrapped
+          hasLineNumbers
+          maxHeight={460}
+        />
+      </section>
+    </Band>
+  );
+}
+
+function Troubleshooting() {
+  return (
+    <Band id="troubleshooting">
+      <section {...stylex.props(styles.referenceSplit)}>
+        <section {...stylex.props(styles.copyBlock)}>
+          <SectionHeader
+            badge="Troubleshooting"
+            title="Most integration failures are boundary mismatches."
+          >
+            Start with the contract that owns the failing behavior: app
+            registration for rendering, command declarations for palette work,
+            context keys for visibility, preference schemas for settings, and
+            Worker routes for edge requests.
+          </SectionHeader>
+          <section {...stylex.props(styles.notePanel)}>
+            <Text as="p" display="block" color="secondary">
+              The runtime fails loudly for unknown commands, duplicate
+              manifests, invalid preference values, second shell instances, and
+              missing D1 bindings so the fix lands at the owning boundary.
+            </Text>
+          </section>
+        </section>
+        <SpecTable caption="Common symptoms" rows={troubleshootingRows} />
       </section>
     </Band>
   );
@@ -1484,7 +3072,10 @@ function Reference() {
     <Band id="reference" muted>
       <section {...stylex.props(styles.guideGrid)}>
         <section {...stylex.props(styles.copyBlock)}>
-          <SectionHeader badge="Reference" title="The public API mirrors product ownership boundaries.">
+          <SectionHeader
+            badge="Reference"
+            title="The public API mirrors product ownership boundaries."
+          >
             The reference is intentionally short. The framework surface should
             make product seams clearer: shell runtime, app modules, React UI,
             design wrapper, and Worker helpers.
@@ -1509,7 +3100,10 @@ function ShipChecklist() {
     <Band id="ship">
       <section {...stylex.props(styles.referenceSplit)}>
         <section {...stylex.props(styles.copyBlock)}>
-          <SectionHeader badge="Ship" title="What to verify before publishing a shell product.">
+          <SectionHeader
+            badge="Ship"
+            title="What to verify before publishing a shell product."
+          >
             The framework is intentionally explicit, so the release checklist is
             explicit too. Validate the package, inspect generated files, and
             confirm external platform assumptions before deployment.
@@ -1540,6 +3134,7 @@ npm run docs:screenshot
 git status --short
 gh run list --workflow Docs --limit 3`}
           width="100%"
+          xstyle={styles.codeBlockStripe}
           isWrapped
         />
       </section>
@@ -1550,7 +3145,12 @@ gh run list --workflow Docs --limit 3`}
 function SpecTable({ caption, rows }: { caption: string; rows: SpecRow[] }) {
   return (
     <section {...stylex.props(styles.tableFrame)}>
-      <Text type="label" weight="semibold" display="block" xstyle={styles.tableCaption}>
+      <Text
+        type="label"
+        weight="semibold"
+        display="block"
+        xstyle={styles.tableCaption}
+      >
         {caption}
       </Text>
       <table {...stylex.props(styles.specTable)}>
@@ -1563,7 +3163,10 @@ function SpecTable({ caption, rows }: { caption: string; rows: SpecRow[] }) {
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={`${row.name}:${row.tag}`} {...stylex.props(styles.tableRow)}>
+            <tr
+              key={`${row.name}:${row.tag}`}
+              {...stylex.props(styles.tableRow)}
+            >
               <td {...stylex.props(styles.tableCell, styles.tableNameCell)}>
                 <Code>{row.name}</Code>
               </td>
@@ -1597,45 +3200,413 @@ function LinkList({ links }: { links: LinkRow[] }) {
   );
 }
 
+function isDocsPageId(value: string): value is DocsPageId {
+  return Object.prototype.hasOwnProperty.call(docsPages, value);
+}
+
+function getDefaultSectionId(pageId: DocsPageId) {
+  return docsPages[pageId].sectionIds[0];
+}
+
+function normalizeHashPart(value: string | undefined) {
+  if (!value) {
+    return "";
+  }
+
+  const part = value.split("?")[0] ?? "";
+
+  try {
+    return decodeURIComponent(part);
+  } catch {
+    return part;
+  }
+}
+
+function parseDocsRoute(hash: string): DocsRoute {
+  const routeValue = hash.replace(/^#\/?/, "");
+  const [firstPart, secondPart] = routeValue.split("/");
+  const first = normalizeHashPart(firstPart);
+  const second = normalizeHashPart(secondPart);
+
+  if (isDocsPageId(first)) {
+    const section = docsSectionById.get(second);
+
+    if (section && section.pageId === first) {
+      return { pageId: first, sectionId: section.id };
+    }
+
+    if (section) {
+      return { pageId: section.pageId, sectionId: section.id };
+    }
+
+    return { pageId: first };
+  }
+
+  const legacySection = docsSectionById.get(first);
+
+  if (legacySection) {
+    return { pageId: legacySection.pageId, sectionId: legacySection.id };
+  }
+
+  return { pageId: "overview" };
+}
+
+function useDocsRoute() {
+  const [route, setRoute] = useState<DocsRoute>(() =>
+    typeof window === "undefined"
+      ? { pageId: "overview" }
+      : parseDocsRoute(window.location.hash),
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const onHashChange = () => {
+      setRoute(parseDocsRoute(window.location.hash));
+    };
+
+    onHashChange();
+    window.addEventListener("hashchange", onHashChange);
+
+    return () => {
+      window.removeEventListener("hashchange", onHashChange);
+    };
+  }, []);
+
+  return route;
+}
+
+function useDocsRouteScroll(route: DocsRoute) {
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      const targetId = route.sectionId ?? getDefaultSectionId(route.pageId);
+      const target = document.getElementById(targetId);
+
+      if (target) {
+        target.scrollIntoView({ block: "start" });
+        return;
+      }
+
+      window.scrollTo({ top: 0 });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+    };
+  }, [route.pageId, route.sectionId]);
+}
+
+function useActiveDocsSection(sectionIds: string[], routeSectionId?: string) {
+  const [activeSection, setActiveSection] = useState(
+    routeSectionId ?? sectionIds[0],
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    setActiveSection(routeSectionId ?? sectionIds[0]);
+  }, [routeSectionId, sectionIds]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    let animationFrame = 0;
+
+    const updateFromScroll = () => {
+      const visibleSection =
+        sectionIds.findLast((id) => {
+          const element = document.getElementById(id);
+
+          return element ? element.getBoundingClientRect().top <= 140 : false;
+        }) ?? sectionIds[0];
+
+      setActiveSection(visibleSection);
+    };
+
+    const requestScrollUpdate = () => {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(updateFromScroll);
+    };
+
+    const observer =
+      "IntersectionObserver" in window
+        ? new IntersectionObserver(
+            (entries) => {
+              const visibleEntries = entries
+                .filter((entry) => entry.isIntersecting)
+                .sort(
+                  (a, b) => a.boundingClientRect.top - b.boundingClientRect.top,
+                );
+              const visibleEntry = visibleEntries[0];
+
+              if (visibleEntry?.target.id) {
+                setActiveSection(visibleEntry.target.id);
+              }
+            },
+            {
+              rootMargin: "-100px 0% -60% 0%",
+              threshold: 0,
+            },
+          )
+        : undefined;
+
+    sectionIds.forEach((id) => {
+      const element = document.getElementById(id);
+
+      if (element) {
+        observer?.observe(element);
+      }
+    });
+
+    updateFromScroll();
+    window.addEventListener("scroll", requestScrollUpdate, { passive: true });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.removeEventListener("scroll", requestScrollUpdate);
+      observer?.disconnect();
+    };
+  }, [sectionIds]);
+
+  return activeSection;
+}
+
+function useDocsSearchShortcut(onSearchQueryChange: (query: string) => void) {
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const isTypingTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) {
+        return false;
+      }
+
+      return (
+        target.isContentEditable ||
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT"
+      );
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      const isSearchShortcut =
+        (event.key === "/" &&
+          !event.metaKey &&
+          !event.ctrlKey &&
+          !event.altKey) ||
+        (event.key.toLowerCase() === "k" && event.metaKey && !event.ctrlKey);
+
+      if (isSearchShortcut && !isTypingTarget(event.target)) {
+        const input = document.querySelector<HTMLInputElement>(
+          'input[name="docsSearch"]',
+        );
+
+        if (input && input.offsetParent) {
+          event.preventDefault();
+          input.focus();
+        }
+      }
+
+      if (
+        event.key === "Escape" &&
+        event.target instanceof HTMLInputElement &&
+        event.target.name === "docsSearch"
+      ) {
+        onSearchQueryChange("");
+        event.target.blur();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onSearchQueryChange]);
+}
+
+function DocsPage({ pageId }: { pageId: DocsPageId }) {
+  switch (pageId) {
+    case "overview":
+      return (
+        <>
+          <DocsHero />
+          <FrameworkMap />
+          <ArchitectureModel />
+        </>
+      );
+    case "quickstart":
+      return (
+        <>
+          <Install />
+          <Quickstart />
+          <ProjectLayout />
+        </>
+      );
+    case "runtime":
+      return (
+        <>
+          <ManifestContract />
+          <RuntimeLifecycle />
+          <ActivationContext />
+          <Commands />
+          <Preferences />
+          <RuntimeState />
+          <ReactShell />
+          <DesignSystem />
+        </>
+      );
+    case "build":
+      return (
+        <>
+          <Cli />
+          <CliReference />
+          <CliWorkflows />
+          <Generators />
+          <GeneratedContracts />
+        </>
+      );
+    case "reference":
+      return (
+        <>
+          <Workers />
+          <ExportMap />
+          <Troubleshooting />
+          <Reference />
+          <ShipChecklist />
+        </>
+      );
+    default:
+      return null;
+  }
+}
+
 export function DocsApp() {
+  const route = useDocsRoute();
+  const activeSection = useActiveDocsSection(
+    docsPages[route.pageId].sectionIds,
+    route.sectionId,
+  );
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useDocsRouteScroll(route);
+  useDocsSearchShortcut(setSearchQuery);
+
   return (
     <AstryxKitProvider appearance="system">
       <AppShell
+        xstyle={styles.docsShell}
         height="auto"
-        variant="elevated"
+        variant="section"
         contentPadding={0}
-        topNav={<TopNavigation />}
-        sideNav={<SideNavigation />}>
-        <DocsHero />
-        <Install />
-        <Quickstart />
-        <FrameworkMap />
-        <RuntimeLifecycle />
-        <Commands />
-        <Preferences />
-        <ReactShell />
-        <DesignSystem />
-        <Cli />
-        <Generators />
-        <Workers />
-        <Reference />
-        <ShipChecklist />
+        topNav={
+          <TopNavigation
+            activePage={route.pageId}
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+          />
+        }
+        sideNav={<SideNavigation activeSection={activeSection} />}
+      >
+        <DocsPage pageId={route.pageId} />
       </AppShell>
     </AstryxKitProvider>
   );
 }
 
 const styles = stylex.create({
-  heroBand: {
-    backgroundColor: colorVars["--color-background-surface"],
-    borderBottomColor: colorVars["--color-border"],
+  docsShell: {
+    backgroundColor: "#f4f7fa",
+  },
+  topNavStripe: {
+    backgroundColor: "#fff",
+    borderBottomColor: "#e3e8ee",
     borderBottomStyle: "solid",
     borderBottomWidth: borderVars["--border-width"],
-    paddingBlock: spacingVars["--spacing-12"],
+    boxShadow: "0 1px 1px rgba(16, 17, 26, 0.08)",
+  },
+  sideNavStripe: {
+    backgroundColor: "#f4f7fa",
+    borderInlineEndColor: "#e3e8ee",
+    borderInlineEndStyle: "solid",
+    borderInlineEndWidth: borderVars["--border-width"],
+  },
+  topNavActions: {
+    alignItems: "center",
+    display: "flex",
+    gap: spacingVars["--spacing-2"],
+    minWidth: 0,
+  },
+  quickFind: {
+    display: {
+      default: "none",
+      "@media (min-width: 980px)": "block",
+    },
+    minWidth: 0,
+    position: "relative",
+    width: "min(34vw, 360px)",
+    zIndex: 20,
+  },
+  quickFindResults: {
+    backgroundColor: "#fff",
+    borderColor: "#e3e8ee",
+    borderRadius: radiusVars["--radius-inner"],
+    borderStyle: "solid",
+    borderWidth: borderVars["--border-width"],
+    boxShadow:
+      "0 1px 1px rgba(16, 17, 26, 0.08), 0 8px 24px rgba(60, 66, 87, 0.08)",
+    insetInlineEnd: 0,
+    insetInlineStart: 0,
+    maxHeight: "min(60vh, 360px)",
+    overflowY: "auto",
+    position: "absolute",
+    top: `calc(100% + ${spacingVars["--spacing-2"]})`,
+  },
+  quickFindList: {
+    display: "grid",
+    listStyle: "none",
+    margin: 0,
+    padding: spacingVars["--spacing-2"],
+  },
+  quickFindItem: {
+    borderRadius: radiusVars["--radius-inner"],
+    display: "grid",
+    gap: spacingVars["--spacing-1"],
+    paddingBlock: spacingVars["--spacing-2"],
+    paddingInline: spacingVars["--spacing-3"],
+    ":hover": {
+      backgroundColor: "#f6f8fa",
+    },
+    ":focus-within": {
+      backgroundColor: "#f6f8fa",
+    },
+  },
+  quickFindEmpty: {
+    padding: spacingVars["--spacing-4"],
+  },
+  heroBand: {
+    backgroundColor: "#fff",
+    borderBottomColor: "#e3e8ee",
+    borderBottomStyle: "solid",
+    borderBottomWidth: borderVars["--border-width"],
+    paddingBlock: spacingVars["--spacing-10"],
     paddingInline: {
       default: spacingVars["--spacing-5"],
       "@media (min-width: 760px)": spacingVars["--spacing-8"],
     },
+    scrollMarginTop: `calc(${spacingVars["--spacing-12"]} + ${spacingVars["--spacing-8"]})`,
   },
   hero: {
     alignItems: "start",
@@ -1643,10 +3614,10 @@ const styles = stylex.create({
     gap: spacingVars["--spacing-10"],
     gridTemplateColumns: {
       default: "minmax(0, 1fr)",
-      "@media (min-width: 1080px)": "minmax(0, 1fr) minmax(420px, 0.82fr)",
+      "@media (min-width: 1080px)": "minmax(0, 1fr) minmax(420px, 0.9fr)",
     },
     marginInline: "auto",
-    maxWidth: 1220,
+    maxWidth: 1175,
     width: "100%",
   },
   heroCopy: {
@@ -1662,18 +3633,20 @@ const styles = stylex.create({
     gap: spacingVars["--spacing-2"],
   },
   systemFrame: {
-    backgroundColor: colorVars["--color-background-card"],
-    borderColor: colorVars["--color-border-emphasized"],
-    borderRadius: radiusVars["--radius-element"],
+    backgroundColor: "#fff",
+    borderColor: "#e3e8ee",
+    borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
-    boxShadow: shadowVars["--shadow-low"],
+    boxShadow:
+      "0 1px 1px rgba(16, 17, 26, 0.08), 0 2px 5px rgba(60, 66, 87, 0.08)",
     minWidth: 0,
     overflow: "hidden",
   },
   systemHeader: {
     alignItems: "center",
-    borderBottomColor: colorVars["--color-border"],
+    backgroundColor: "#f6f8fa",
+    borderBottomColor: "#e3e8ee",
     borderBottomStyle: "solid",
     borderBottomWidth: borderVars["--border-width"],
     display: "flex",
@@ -1693,13 +3666,14 @@ const styles = stylex.create({
   },
   systemRow: {
     alignItems: "start",
-    borderBottomColor: colorVars["--color-border"],
+    borderBottomColor: "#e3e8ee",
     borderBottomStyle: "solid",
     borderBottomWidth: borderVars["--border-width"],
     display: "grid",
     gap: spacingVars["--spacing-3"],
     gridTemplateColumns: "auto minmax(0, 1fr)",
-    padding: spacingVars["--spacing-4"],
+    paddingBlock: spacingVars["--spacing-3"],
+    paddingInline: spacingVars["--spacing-4"],
   },
   systemRowCopy: {
     display: "grid",
@@ -1707,7 +3681,7 @@ const styles = stylex.create({
     minWidth: 0,
   },
   metricStrip: {
-    borderTopColor: colorVars["--color-border"],
+    borderTopColor: "#e3e8ee",
     borderTopStyle: "solid",
     borderTopWidth: borderVars["--border-width"],
     display: "grid",
@@ -1715,14 +3689,15 @@ const styles = stylex.create({
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
   },
   metric: {
-    borderInlineEndColor: colorVars["--color-border"],
+    borderInlineEndColor: "#e3e8ee",
     borderInlineEndStyle: "solid",
     borderInlineEndWidth: borderVars["--border-width"],
-    padding: spacingVars["--spacing-4"],
+    paddingBlock: spacingVars["--spacing-3"],
+    paddingInline: spacingVars["--spacing-4"],
   },
   band: {
-    backgroundColor: colorVars["--color-background-surface"],
-    borderBottomColor: colorVars["--color-border"],
+    backgroundColor: "#fff",
+    borderBottomColor: "#e3e8ee",
     borderBottomStyle: "solid",
     borderBottomWidth: borderVars["--border-width"],
     paddingBlock: spacingVars["--spacing-10"],
@@ -1730,15 +3705,16 @@ const styles = stylex.create({
       default: spacingVars["--spacing-5"],
       "@media (min-width: 760px)": spacingVars["--spacing-8"],
     },
+    scrollMarginTop: `calc(${spacingVars["--spacing-12"]} + ${spacingVars["--spacing-8"]})`,
   },
   bandMuted: {
-    backgroundColor: colorVars["--color-background-body"],
+    backgroundColor: "#f4f7fa",
   },
   bandInner: {
     display: "grid",
     gap: spacingVars["--spacing-6"],
     marginInline: "auto",
-    maxWidth: 1220,
+    maxWidth: 1175,
     width: "100%",
   },
   sectionHeader: {
@@ -1751,28 +3727,28 @@ const styles = stylex.create({
   installStrip: {
     alignItems: "start",
     display: "grid",
-    gap: spacingVars["--spacing-6"],
+    gap: spacingVars["--spacing-10"],
     gridTemplateColumns: {
       default: "minmax(0, 1fr)",
-      "@media (min-width: 980px)": "minmax(0, 0.82fr) minmax(420px, 1fr)",
+      "@media (min-width: 980px)": "minmax(0, 1fr) minmax(420px, 1fr)",
     },
   },
   guideGrid: {
     alignItems: "start",
     display: "grid",
-    gap: spacingVars["--spacing-6"],
+    gap: spacingVars["--spacing-10"],
     gridTemplateColumns: {
       default: "minmax(0, 1fr)",
-      "@media (min-width: 1080px)": "minmax(0, 0.9fr) minmax(440px, 1.1fr)",
+      "@media (min-width: 1080px)": "minmax(0, 1fr) minmax(430px, 1fr)",
     },
   },
   referenceSplit: {
     alignItems: "start",
     display: "grid",
-    gap: spacingVars["--spacing-6"],
+    gap: spacingVars["--spacing-10"],
     gridTemplateColumns: {
       default: "minmax(0, 1fr)",
-      "@media (min-width: 1080px)": "minmax(0, 1fr) minmax(420px, 0.88fr)",
+      "@media (min-width: 1080px)": "minmax(0, 1fr) minmax(420px, 1fr)",
     },
   },
   copyBlock: {
@@ -1785,10 +3761,17 @@ const styles = stylex.create({
     gap: spacingVars["--spacing-4"],
     minWidth: 0,
   },
+  codeBlockStripe: {
+    "--color-syntax-background": "#1a2652",
+    borderColor: "#1a2652",
+    borderRadius: radiusVars["--radius-inner"],
+    boxShadow:
+      "0 1px 1px rgba(16, 17, 26, 0.08), 0 8px 24px rgba(60, 66, 87, 0.08)",
+  },
   notePanel: {
-    backgroundColor: colorVars["--color-background-card"],
-    borderColor: colorVars["--color-border"],
-    borderRadius: radiusVars["--radius-element"],
+    backgroundColor: "#fff",
+    borderColor: "#e3e8ee",
+    borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
     padding: spacingVars["--spacing-4"],
@@ -1805,15 +3788,15 @@ const styles = stylex.create({
   },
   surfacePanel: {
     alignContent: "start",
-    backgroundColor: colorVars["--color-background-card"],
-    borderColor: colorVars["--color-border"],
-    borderRadius: radiusVars["--radius-element"],
+    backgroundColor: "#fff",
+    borderColor: "#e3e8ee",
+    borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
     display: "grid",
-    gap: spacingVars["--spacing-4"],
-    minHeight: 220,
-    padding: spacingVars["--spacing-5"],
+    gap: spacingVars["--spacing-3"],
+    minHeight: 0,
+    padding: spacingVars["--spacing-4"],
   },
   panelHeader: {
     alignItems: "center",
@@ -1823,9 +3806,9 @@ const styles = stylex.create({
   },
   iconFrame: {
     alignItems: "center",
-    backgroundColor: colorVars["--color-background-muted"],
-    borderColor: colorVars["--color-border"],
-    borderRadius: radiusVars["--radius-element"],
+    backgroundColor: "#f6f8fa",
+    borderColor: "#e3e8ee",
+    borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
     display: "inline-flex",
@@ -1841,9 +3824,9 @@ const styles = stylex.create({
     padding: 0,
   },
   stepItem: {
-    backgroundColor: colorVars["--color-background-card"],
-    borderColor: colorVars["--color-border"],
-    borderRadius: radiusVars["--radius-element"],
+    backgroundColor: "#fff",
+    borderColor: "#e3e8ee",
+    borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
     display: "grid",
@@ -1853,8 +3836,8 @@ const styles = stylex.create({
   },
   stepIndex: {
     alignItems: "center",
-    backgroundColor: colorVars["--color-accent"],
-    borderRadius: radiusVars["--radius-element"],
+    backgroundColor: "#556cd6",
+    borderRadius: radiusVars["--radius-inner"],
     color: colorVars["--color-on-accent"],
     display: "inline-flex",
     fontFamily: typographyVars["--font-family-code"],
@@ -1875,9 +3858,9 @@ const styles = stylex.create({
     padding: 0,
   },
   layerItem: {
-    backgroundColor: colorVars["--color-background-card"],
-    borderColor: colorVars["--color-border"],
-    borderRadius: radiusVars["--radius-element"],
+    backgroundColor: "#fff",
+    borderColor: "#e3e8ee",
+    borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
     display: "grid",
@@ -1886,11 +3869,12 @@ const styles = stylex.create({
     paddingInline: spacingVars["--spacing-4"],
   },
   interactivePanel: {
-    backgroundColor: colorVars["--color-background-card"],
-    borderColor: colorVars["--color-border-emphasized"],
-    borderRadius: radiusVars["--radius-element"],
+    backgroundColor: "#fff",
+    borderColor: "#e3e8ee",
+    borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
+    boxShadow: "0 1px 1px rgba(16, 17, 26, 0.08)",
     display: "grid",
     gap: spacingVars["--spacing-5"],
     padding: spacingVars["--spacing-5"],
@@ -1930,9 +3914,9 @@ const styles = stylex.create({
     minWidth: 0,
   },
   resultCard: {
-    backgroundColor: colorVars["--color-background-surface"],
-    borderColor: colorVars["--color-border"],
-    borderRadius: radiusVars["--radius-element"],
+    backgroundColor: "#fff",
+    borderColor: "#e3e8ee",
+    borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
     display: "grid",
@@ -1942,9 +3926,9 @@ const styles = stylex.create({
   },
   resultRank: {
     alignItems: "center",
-    backgroundColor: colorVars["--color-background-muted"],
-    borderColor: colorVars["--color-border"],
-    borderRadius: radiusVars["--radius-element"],
+    backgroundColor: "#f6f8fa",
+    borderColor: "#e3e8ee",
+    borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
     display: "inline-flex",
@@ -1968,9 +3952,9 @@ const styles = stylex.create({
     gap: spacingVars["--spacing-2"],
   },
   emptyResult: {
-    backgroundColor: colorVars["--color-background-surface"],
-    borderColor: colorVars["--color-border"],
-    borderRadius: radiusVars["--radius-element"],
+    backgroundColor: "#fff",
+    borderColor: "#e3e8ee",
+    borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
     listStyle: "none",
@@ -1982,9 +3966,9 @@ const styles = stylex.create({
   },
   decisionItem: {
     alignItems: "start",
-    backgroundColor: colorVars["--color-background-card"],
-    borderColor: colorVars["--color-border"],
-    borderRadius: radiusVars["--radius-element"],
+    backgroundColor: "#fff",
+    borderColor: "#e3e8ee",
+    borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
     display: "grid",
@@ -1998,36 +3982,40 @@ const styles = stylex.create({
     minWidth: 0,
   },
   tableFrame: {
-    backgroundColor: colorVars["--color-background-card"],
-    borderColor: colorVars["--color-border"],
-    borderRadius: radiusVars["--radius-element"],
+    backgroundColor: "#fff",
+    borderColor: "#e3e8ee",
+    borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
+    boxShadow: "0 1px 1px rgba(16, 17, 26, 0.08)",
     minWidth: 0,
     overflowX: "auto",
   },
   tableCaption: {
-    borderBottomColor: colorVars["--color-border"],
+    backgroundColor: "#f6f8fa",
+    borderBottomColor: "#e3e8ee",
     borderBottomStyle: "solid",
     borderBottomWidth: borderVars["--border-width"],
-    padding: spacingVars["--spacing-4"],
+    paddingBlock: spacingVars["--spacing-3"],
+    paddingInline: spacingVars["--spacing-4"],
   },
   specTable: {
     borderCollapse: "collapse",
-    minWidth: 680,
+    minWidth: 640,
     width: "100%",
   },
   tableRow: {
-    borderBottomColor: colorVars["--color-border"],
+    borderBottomColor: "#e3e8ee",
     borderBottomStyle: "solid",
     borderBottomWidth: borderVars["--border-width"],
   },
   tableHead: {
-    color: colorVars["--color-text-secondary"],
+    backgroundColor: "#f6f8fa",
+    color: "#697386",
     fontFamily: typographyVars["--font-family-body"],
     fontSize: textSizeVars["--font-size-sm"],
     fontWeight: fontWeightVars["--font-weight-semibold"],
-    paddingBlock: spacingVars["--spacing-3"],
+    paddingBlock: spacingVars["--spacing-2"],
     paddingInline: spacingVars["--spacing-4"],
     textAlign: "left",
     whiteSpace: "nowrap",
@@ -2041,9 +4029,9 @@ const styles = stylex.create({
     whiteSpace: "nowrap",
   },
   linkPanel: {
-    backgroundColor: colorVars["--color-background-card"],
-    borderColor: colorVars["--color-border"],
-    borderRadius: radiusVars["--radius-element"],
+    backgroundColor: "#fff",
+    borderColor: "#e3e8ee",
+    borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
     display: "grid",
@@ -2058,7 +4046,7 @@ const styles = stylex.create({
     padding: 0,
   },
   linkItem: {
-    borderTopColor: colorVars["--color-border"],
+    borderTopColor: "#e3e8ee",
     borderTopStyle: "solid",
     borderTopWidth: borderVars["--border-width"],
     paddingBlockStart: spacingVars["--spacing-2"],
