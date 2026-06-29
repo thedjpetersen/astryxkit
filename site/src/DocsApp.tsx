@@ -12,6 +12,7 @@ import {
   SideNavItem,
   SideNavSection,
   Text,
+  TextInput,
   TopNav,
   TopNavHeading,
   TopNavItem,
@@ -30,10 +31,8 @@ import {
   typographyVars,
 } from "@astryxdesign/core/theme/tokens.stylex";
 import * as stylex from "@stylexjs/stylex";
-import type { ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { AstryxKitProvider } from "../../src/design-system";
-
-type Tone = "blue" | "cyan" | "green" | "orange" | "purple" | "teal";
 
 type Surface = {
   body: string;
@@ -42,7 +41,6 @@ type Surface = {
   href?: string;
   icon: IconName;
   title: string;
-  tone: Tone;
 };
 
 type SpecRow = {
@@ -241,7 +239,6 @@ const packageSurfaces: Surface[] = [
     href: "#lifecycle",
     icon: "wrench",
     title: "Shell runtime",
-    tone: "blue",
   },
   {
     body: "The React integration for the shell frame, active app outlet, command palette, preferences panel, and host-state hooks.",
@@ -250,7 +247,6 @@ const packageSurfaces: Surface[] = [
     href: "#react",
     icon: "viewColumns",
     title: "React shell",
-    tone: "teal",
   },
   {
     body: "The Astryx provider wrapper and appearance persistence layer. Use Astryx controls, then compose custom surfaces with StyleX.",
@@ -259,7 +255,6 @@ const packageSurfaces: Surface[] = [
     href: "#design-system",
     icon: "checkDouble",
     title: "Design system",
-    tone: "purple",
   },
   {
     body: "Small helpers for JSON responses, request parsing, route composition, asset fallback, health checks, and D1 access.",
@@ -268,7 +263,6 @@ const packageSurfaces: Surface[] = [
     href: "#workers",
     icon: "externalLink",
     title: "Worker boundary",
-    tone: "green",
   },
 ];
 
@@ -279,7 +273,6 @@ const lifecycleSteps: Surface[] = [
     eyebrow: "01",
     icon: "wrench",
     title: "Construct the host",
-    tone: "blue",
   },
   {
     body: "Register ShellAppManifest objects before rendering app navigation. Commands and preference schemas become visible immediately.",
@@ -287,7 +280,6 @@ const lifecycleSteps: Surface[] = [
     eyebrow: "02",
     icon: "menu",
     title: "Register apps",
-    tone: "teal",
   },
   {
     body: "Activation lazy-loads the app module, creates an app-scoped DisposableStore, sets appActive, and renders the instance.",
@@ -295,7 +287,6 @@ const lifecycleSteps: Surface[] = [
     eyebrow: "03",
     icon: "chevronRight",
     title: "Activate on route",
-    tone: "green",
   },
   {
     body: "Deactivation clears feature context, disposes app handlers and subscriptions, and removes the active app render surface.",
@@ -303,7 +294,6 @@ const lifecycleSteps: Surface[] = [
     eyebrow: "04",
     icon: "stop",
     title: "Dispose cleanly",
-    tone: "orange",
   },
 ];
 
@@ -314,7 +304,6 @@ const commandBehaviors: Surface[] = [
     eyebrow: "Visibility",
     icon: "eyeSlash",
     title: "Context-aware",
-    tone: "blue",
   },
   {
     body: "Palette prefixes reserve distinct mental models for actions, pages, entities, and help.",
@@ -322,7 +311,6 @@ const commandBehaviors: Surface[] = [
     eyebrow: "Search",
     icon: "search",
     title: "Prefix modes",
-    tone: "teal",
   },
   {
     body: "A command can be declared before its handler exists. The host activates the owning app before execution.",
@@ -330,7 +318,6 @@ const commandBehaviors: Surface[] = [
     eyebrow: "Lazy",
     icon: "clock",
     title: "Activation bridge",
-    tone: "green",
   },
   {
     body: "Recent commands are retained inside the registry and ranked above normal empty-query results.",
@@ -338,7 +325,112 @@ const commandBehaviors: Surface[] = [
     eyebrow: "Ranking",
     icon: "arrowUp",
     title: "Useful defaults",
-    tone: "purple",
+  },
+];
+
+type CommandKind = "action" | "entity" | "help" | "page";
+type CommandModeId = "actions" | "all" | "entities" | "help" | "pages";
+type CommandRing = "app" | "feature" | "platform" | "product";
+
+type CommandMode = {
+  id: CommandModeId;
+  kind?: CommandKind;
+  label: string;
+  prefix: string;
+};
+
+type DemoCommand = {
+  description: string;
+  id: string;
+  kind: CommandKind;
+  keywords: string[];
+  ring: CommandRing;
+  shortcut?: string;
+  title: string;
+  when?: string;
+};
+
+type RankedDemoCommand = DemoCommand & {
+  rank: number;
+  score: number;
+};
+
+const commandModes: CommandMode[] = [
+  { id: "all", label: "All", prefix: "" },
+  { id: "actions", kind: "action", label: "Actions", prefix: ">" },
+  { id: "pages", kind: "page", label: "Pages", prefix: "/" },
+  { id: "entities", kind: "entity", label: "Entities", prefix: "@" },
+  { id: "help", kind: "help", label: "Help", prefix: "?" },
+];
+
+const demoCommands: DemoCommand[] = [
+  {
+    description: "Open the shared preference inspector for platform, product, app, and feature settings.",
+    id: "platform.openPreferences",
+    kind: "page",
+    keywords: ["settings", "configuration", "preferences"],
+    ring: "platform",
+    shortcut: "Meta ,",
+    title: "Open Preferences",
+  },
+  {
+    description: "Open the product documentation surface from anywhere in the shell.",
+    id: "platform.openDocs",
+    kind: "page",
+    keywords: ["docs", "help", "reference"],
+    ring: "platform",
+    title: "Open Documentation",
+  },
+  {
+    description: "Navigate to the Catalog app and activate its lazy module.",
+    id: "catalog.open",
+    kind: "page",
+    keywords: ["catalog", "inventory", "products"],
+    ring: "app",
+    title: "Open Catalog",
+  },
+  {
+    description: "Refresh the active Catalog workspace and emit a shell event.",
+    id: "catalog.refresh",
+    kind: "action",
+    keywords: ["refresh", "reload", "catalog"],
+    ring: "app",
+    shortcut: "Meta Shift R",
+    title: "Refresh Catalog",
+    when: "appActive == 'catalog'",
+  },
+  {
+    description: "Archive every selected catalog item through a feature-scoped command source.",
+    id: "catalog.bulkArchive",
+    kind: "action",
+    keywords: ["bulk", "archive", "selected"],
+    ring: "feature",
+    title: "Archive Selected Items",
+    when: "catalog.selectionCount != 0",
+  },
+  {
+    description: "Jump directly to the customer entity that owns the selected catalog item.",
+    id: "catalog.customer",
+    kind: "entity",
+    keywords: ["customer", "owner", "account"],
+    ring: "app",
+    title: "Customer Entity",
+  },
+  {
+    description: "Explain how Catalog commands are registered, filtered, and activated.",
+    id: "catalog.commandHelp",
+    kind: "help",
+    keywords: ["commands", "palette", "catalog"],
+    ring: "app",
+    title: "Catalog Command Help",
+  },
+  {
+    description: "Open Billing from the shared shell navigation model.",
+    id: "billing.open",
+    kind: "page",
+    keywords: ["billing", "invoices", "payments"],
+    ring: "product",
+    title: "Open Billing",
   },
 ];
 
@@ -632,7 +724,7 @@ function DocsHero() {
 
 function SystemRow({ surface }: { surface: Surface }) {
   return (
-    <article {...stylex.props(styles.systemRow, toneBorder(surface.tone))}>
+    <article {...stylex.props(styles.systemRow)}>
       <span {...stylex.props(styles.iconFrame)}>
         <Icon icon={surface.icon} size="sm" color="primary" />
       </span>
@@ -704,7 +796,7 @@ function SectionHeader({
 
 function SurfacePanel({ surface }: { surface: Surface }) {
   return (
-    <article {...stylex.props(styles.surfacePanel, toneBorder(surface.tone))}>
+    <article {...stylex.props(styles.surfacePanel)}>
       <header {...stylex.props(styles.panelHeader)}>
         <span {...stylex.props(styles.iconFrame)}>
           <Icon icon={surface.icon} size="sm" color="primary" />
@@ -901,6 +993,7 @@ function Commands() {
               <SurfacePanel key={surface.title} surface={surface} />
             ))}
           </section>
+          <CommandLab />
           <SpecTable
             caption="Command prefix modes"
             rows={[
@@ -943,6 +1036,188 @@ function Commands() {
     </Band>
   );
 }
+
+function CommandLab() {
+  const [query, setQuery] = useState("catalog");
+  const [mode, setMode] = useState<CommandModeId>("all");
+  const results = useMemo(() => rankDemoCommands(query, mode), [mode, query]);
+
+  return (
+    <section {...stylex.props(styles.interactivePanel)} aria-labelledby="command-lab-title">
+      <header {...stylex.props(styles.interactiveHeader)}>
+        <section {...stylex.props(styles.interactiveTitle)}>
+          <Badge variant="neutral" label="Live model" />
+          <VStack gap={1}>
+            <Heading level={3} id="command-lab-title">
+              Command ranking lab
+            </Heading>
+            <Text as="p" display="block" color="secondary">
+              The list below uses the same ideas as the runtime: prefix mode,
+              ring weight, text match, context, and recency-ready sorting.
+            </Text>
+          </VStack>
+        </section>
+        <Badge variant="neutral" label={`${results.length} results`} />
+      </header>
+      <section {...stylex.props(styles.commandControls)}>
+        <TextInput
+          label="Command query"
+          value={query}
+          onChange={setQuery}
+          placeholder="Search commands"
+          startIcon="search"
+          hasClear
+          width="100%"
+        />
+        <section {...stylex.props(styles.modeButtons)} aria-label="Command prefix modes">
+          {commandModes.map((item) => (
+            <Button
+              key={item.id}
+              label={`${item.prefix || "All"} ${item.label}`}
+              size="sm"
+              variant={item.id === mode ? "secondary" : "ghost"}
+              onClick={() => setMode(item.id)}
+            />
+          ))}
+        </section>
+      </section>
+      <ol {...stylex.props(styles.resultList)} aria-live="polite">
+        {results.length > 0 ? (
+          results.map((command) => (
+            <li key={command.id} {...stylex.props(styles.resultItem)}>
+              <article {...stylex.props(styles.resultCard)}>
+                <section {...stylex.props(styles.resultRank)}>
+                  <Text type="label" weight="semibold" hasTabularNumbers>
+                    {String(command.rank).padStart(2, "0")}
+                  </Text>
+                </section>
+                <section {...stylex.props(styles.resultCopy)}>
+                  <header {...stylex.props(styles.resultHeader)}>
+                    <HStack gap={2} align="center" wrap="wrap">
+                      <Text type="label" weight="semibold">
+                        {command.title}
+                      </Text>
+                      <Code>{command.id}</Code>
+                    </HStack>
+                    <HStack gap={1.5} align="center" wrap="wrap">
+                      <Badge variant="neutral" label={command.ring} />
+                      <Badge variant="neutral" label={command.kind} />
+                      <Text type="supporting" color="secondary" hasTabularNumbers>
+                        score {command.score}
+                      </Text>
+                    </HStack>
+                  </header>
+                  <Text as="p" display="block" color="secondary">
+                    {command.description}
+                  </Text>
+                  {command.when || command.shortcut ? (
+                    <footer {...stylex.props(styles.resultMeta)}>
+                      {command.when ? <Code>{command.when}</Code> : null}
+                      {command.shortcut ? <Code>{command.shortcut}</Code> : null}
+                    </footer>
+                  ) : null}
+                </section>
+              </article>
+            </li>
+          ))
+        ) : (
+          <li {...stylex.props(styles.emptyResult)}>
+            <Text as="p" display="block" color="secondary">
+              No commands match the current query and prefix mode.
+            </Text>
+          </li>
+        )}
+      </ol>
+    </section>
+  );
+}
+
+function rankDemoCommands(query: string, modeId: CommandModeId): RankedDemoCommand[] {
+  const mode = commandModes.find((item) => item.id === modeId);
+  const parsed = parseCommandQuery(query);
+  const normalizedQuery = parsed.query;
+  const activeKind = parsed.kind ?? mode?.kind;
+
+  return demoCommands
+    .filter((command) => (activeKind ? command.kind === activeKind : true))
+    .map((command) => {
+      const baseScore =
+        ringWeights[command.ring] + kindWeights[command.kind] + (command.when ? 1 : 0);
+      const textScore = scoreCommandText(command, normalizedQuery);
+
+      return {
+        ...command,
+        matchScore: textScore,
+        rank: 0,
+        score: baseScore + textScore,
+      };
+    })
+    .filter((command) => normalizedQuery.length === 0 || command.matchScore > 0)
+    .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title))
+    .slice(0, 6)
+    .map(({ matchScore: _matchScore, ...command }, index) => ({
+      ...command,
+      rank: index + 1,
+    }));
+}
+
+function parseCommandQuery(query: string): { kind?: CommandKind; query: string } {
+  const trimmed = query.trimStart();
+  const mode = commandModes.find((item) => item.prefix && trimmed.startsWith(item.prefix));
+
+  if (!mode) {
+    return { query: query.trim().toLowerCase() };
+  }
+
+  return {
+    kind: mode.kind,
+    query: trimmed.slice(mode.prefix.length).trim().toLowerCase(),
+  };
+}
+
+function scoreCommandText(command: DemoCommand, query: string): number {
+  if (!query) {
+    return 4;
+  }
+
+  const title = command.title.toLowerCase();
+  const id = command.id.toLowerCase();
+  const description = command.description.toLowerCase();
+  const keywords = command.keywords.join(" ").toLowerCase();
+  let score = 0;
+
+  if (title.includes(query)) {
+    score += title.startsWith(query) ? 14 : 10;
+  }
+
+  if (id.includes(query)) {
+    score += 6;
+  }
+
+  if (keywords.includes(query)) {
+    score += 5;
+  }
+
+  if (description.includes(query)) {
+    score += 2;
+  }
+
+  return score;
+}
+
+const ringWeights: Record<CommandRing, number> = {
+  platform: 16,
+  product: 12,
+  feature: 10,
+  app: 8,
+};
+
+const kindWeights: Record<CommandKind, number> = {
+  action: 4,
+  entity: 3,
+  help: 1,
+  page: 2,
+};
 
 function Preferences() {
   return (
@@ -1066,7 +1341,7 @@ function DesignSystem() {
             />
             <Decision
               title="Use color as metadata"
-              body="Badges and border accents can distinguish concepts. Whole-card pastel fills should be rare because they flatten hierarchy."
+              body="Badges, icons, and status text can distinguish concepts. Avoid colored edge strips because they read as decoration instead of structure."
             />
             <Decision
               title="Keep framework rules visible"
@@ -1350,17 +1625,6 @@ export function DocsApp() {
   );
 }
 
-function toneBorder(tone: Tone) {
-  return {
-    blue: styles.toneBlue,
-    cyan: styles.toneCyan,
-    green: styles.toneGreen,
-    orange: styles.toneOrange,
-    purple: styles.tonePurple,
-    teal: styles.toneTeal,
-  }[tone];
-}
-
 const styles = stylex.create({
   heroBand: {
     backgroundColor: colorVars["--color-background-surface"],
@@ -1432,8 +1696,6 @@ const styles = stylex.create({
     borderBottomColor: colorVars["--color-border"],
     borderBottomStyle: "solid",
     borderBottomWidth: borderVars["--border-width"],
-    borderInlineStartStyle: "solid",
-    borderInlineStartWidth: spacingVars["--spacing-1"],
     display: "grid",
     gap: spacingVars["--spacing-3"],
     gridTemplateColumns: "auto minmax(0, 1fr)",
@@ -1545,8 +1807,6 @@ const styles = stylex.create({
     alignContent: "start",
     backgroundColor: colorVars["--color-background-card"],
     borderColor: colorVars["--color-border"],
-    borderInlineStartStyle: "solid",
-    borderInlineStartWidth: spacingVars["--spacing-1"],
     borderRadius: radiusVars["--radius-element"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
@@ -1617,9 +1877,6 @@ const styles = stylex.create({
   layerItem: {
     backgroundColor: colorVars["--color-background-card"],
     borderColor: colorVars["--color-border"],
-    borderInlineStartColor: colorVars["--color-border-emphasized"],
-    borderInlineStartStyle: "solid",
-    borderInlineStartWidth: spacingVars["--spacing-1"],
     borderRadius: radiusVars["--radius-element"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
@@ -1627,6 +1884,97 @@ const styles = stylex.create({
     gap: spacingVars["--spacing-1"],
     paddingBlock: spacingVars["--spacing-3"],
     paddingInline: spacingVars["--spacing-4"],
+  },
+  interactivePanel: {
+    backgroundColor: colorVars["--color-background-card"],
+    borderColor: colorVars["--color-border-emphasized"],
+    borderRadius: radiusVars["--radius-element"],
+    borderStyle: "solid",
+    borderWidth: borderVars["--border-width"],
+    display: "grid",
+    gap: spacingVars["--spacing-5"],
+    padding: spacingVars["--spacing-5"],
+  },
+  interactiveHeader: {
+    alignItems: "start",
+    display: "flex",
+    flexWrap: "wrap",
+    gap: spacingVars["--spacing-3"],
+    justifyContent: "space-between",
+  },
+  interactiveTitle: {
+    display: "grid",
+    gap: spacingVars["--spacing-3"],
+    justifyItems: "start",
+    maxWidth: 680,
+    minWidth: 0,
+  },
+  commandControls: {
+    display: "grid",
+    gap: spacingVars["--spacing-3"],
+  },
+  modeButtons: {
+    alignItems: "center",
+    display: "flex",
+    flexWrap: "wrap",
+    gap: spacingVars["--spacing-2"],
+  },
+  resultList: {
+    display: "grid",
+    gap: spacingVars["--spacing-2"],
+    listStyle: "none",
+    margin: 0,
+    padding: 0,
+  },
+  resultItem: {
+    minWidth: 0,
+  },
+  resultCard: {
+    backgroundColor: colorVars["--color-background-surface"],
+    borderColor: colorVars["--color-border"],
+    borderRadius: radiusVars["--radius-element"],
+    borderStyle: "solid",
+    borderWidth: borderVars["--border-width"],
+    display: "grid",
+    gap: spacingVars["--spacing-3"],
+    gridTemplateColumns: "auto minmax(0, 1fr)",
+    padding: spacingVars["--spacing-4"],
+  },
+  resultRank: {
+    alignItems: "center",
+    backgroundColor: colorVars["--color-background-muted"],
+    borderColor: colorVars["--color-border"],
+    borderRadius: radiusVars["--radius-element"],
+    borderStyle: "solid",
+    borderWidth: borderVars["--border-width"],
+    display: "inline-flex",
+    height: spacingVars["--spacing-8"],
+    justifyContent: "center",
+    width: spacingVars["--spacing-8"],
+  },
+  resultCopy: {
+    display: "grid",
+    gap: spacingVars["--spacing-2"],
+    minWidth: 0,
+  },
+  resultHeader: {
+    display: "grid",
+    gap: spacingVars["--spacing-2"],
+  },
+  resultMeta: {
+    alignItems: "center",
+    display: "flex",
+    flexWrap: "wrap",
+    gap: spacingVars["--spacing-2"],
+  },
+  emptyResult: {
+    backgroundColor: colorVars["--color-background-surface"],
+    borderColor: colorVars["--color-border"],
+    borderRadius: radiusVars["--radius-element"],
+    borderStyle: "solid",
+    borderWidth: borderVars["--border-width"],
+    listStyle: "none",
+    padding: spacingVars["--spacing-4"],
   },
   decisionList: {
     display: "grid",
@@ -1714,23 +2062,5 @@ const styles = stylex.create({
     borderTopStyle: "solid",
     borderTopWidth: borderVars["--border-width"],
     paddingBlockStart: spacingVars["--spacing-2"],
-  },
-  toneBlue: {
-    borderInlineStartColor: colorVars["--color-border-blue"],
-  },
-  toneCyan: {
-    borderInlineStartColor: colorVars["--color-border-cyan"],
-  },
-  toneGreen: {
-    borderInlineStartColor: colorVars["--color-border-green"],
-  },
-  toneOrange: {
-    borderInlineStartColor: colorVars["--color-border-orange"],
-  },
-  tonePurple: {
-    borderInlineStartColor: colorVars["--color-border-purple"],
-  },
-  toneTeal: {
-    borderInlineStartColor: colorVars["--color-border-teal"],
   },
 });

@@ -12,7 +12,8 @@ AstryxKit composes the Astryx design system instead of replacing it.
 - Use `xstyle` for custom styling.
 - Use semantic tokens from Astryx docs instead of hardcoded values.
 - Prefer neutral documentation surfaces over pastel card grids.
-- Use color as metadata: badges, icon accents, and border accents.
+- Use color as metadata: badges, icon accents, and status text. Avoid colored
+  edge strips as a layout device.
 - Build higher-order surfaces with StyleX when the base component library does
   not encode the documentation pattern directly.
 
