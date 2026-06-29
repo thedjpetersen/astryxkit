@@ -72,6 +72,7 @@
     "@astryxdesign/core": "^0.0.15",
     "@cloudflare/workers-types": "^4.20260624.1",
     "@playwright/test": "^1.61.1",
+    "@stylexjs/babel-plugin": "^0.18.3",
     "@stylexjs/stylex": "^0.18.3",
     "@types/node": "^26.0.0",
     "@types/react": "^19.2.17",

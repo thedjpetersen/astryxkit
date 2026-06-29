@@ -8,7 +8,26 @@ const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 export default defineConfig({
   base: "/astryxkit/",
   root: siteRoot,
-  plugins: [react()],
+  plugins: [
+    react({
+      babel: {
+        plugins: [
+          [
+            "@stylexjs/babel-plugin",
+            {
+              dev: process.env.NODE_ENV !== "production",
+              runtimeInjection: true,
+              treeshakeCompensation: true,
+              unstable_moduleResolution: {
+                rootDir: repoRoot,
+                type: "commonJS",
+              },
+            },
+          ],
+        ],
+      },
+    }),
+  ],
   build: {
     outDir: "dist",
     emptyOutDir: true,
