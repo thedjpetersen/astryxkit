@@ -83,6 +83,37 @@ host.register({
 });
 ```
 
+Commands can declare `shortcodes` for stable human-facing IDs that should be
+searchable and routeable without being treated as loose keywords:
+
+```ts
+host.register({
+  id: "tasks",
+  name: "Tasks",
+  ownerTeam: "Operations",
+  route: "/app/tasks",
+  entryUrl: "/app/modules/tasks.js",
+  icon: "checkDouble",
+  commands: [
+    {
+      id: "tasks.task.pto.open",
+      appId: "tasks",
+      category: "Tasks",
+      title: "PTO reference",
+      route: "/app/tasks/T00000A",
+      shortcodes: ["T00000A"],
+    },
+  ],
+  load: () => import("@app/tasks"),
+});
+
+const command = host.commandForShortcode("t00000a");
+```
+
+Shortcode lookup is case-insensitive and accepts a leading `#` in the query.
+Use `shortcodes` for canonical record IDs; keep `keywords` for broad discovery
+terms and synonyms.
+
 ## React Shell
 
 ```tsx

@@ -31,12 +31,14 @@ describe("astryxkit shell SDK", () => {
     host.register(app.manifest);
 
     expect(app.manifest.load).not.toHaveBeenCalled();
-    expect(host.paletteItems().map((item) => item.id)).toContain("cold-one.open");
+    expect(host.paletteItems().map((item) => item.id)).toContain(
+      "cold-one.open",
+    );
     expect(
       host
         .settingsGroups()
         .flatMap((group) => group.settings)
-        .map((setting) => setting.key)
+        .map((setting) => setting.key),
     ).toContain("cold-one.density");
   });
 
@@ -51,7 +53,7 @@ describe("astryxkit shell SDK", () => {
 
     expect(shell().commands.isBound("switch-first.focused")).toBe(true);
     expect(host.paletteItems().map((item) => item.id)).toContain(
-      "switch-first.focused"
+      "switch-first.focused",
     );
 
     await host.activate(second.manifest.id);
@@ -59,10 +61,10 @@ describe("astryxkit shell SDK", () => {
     expect(first.disposeCount()).toBe(1);
     expect(shell().commands.isBound("switch-first.focused")).toBe(false);
     expect(host.paletteItems().map((item) => item.id)).not.toContain(
-      "switch-first.focused"
+      "switch-first.focused",
     );
     expect(host.paletteItems().map((item) => item.id)).toContain(
-      "switch-second.focused"
+      "switch-second.focused",
     );
   });
 
@@ -74,7 +76,9 @@ describe("astryxkit shell SDK", () => {
     host.register(second.manifest);
 
     await host.activate(first.manifest.id);
-    expect(shell().preferences.inspect("prefs-first.density").scope).toBe("app");
+    expect(shell().preferences.inspect("prefs-first.density").scope).toBe(
+      "app",
+    );
 
     shell().preferences.set("prefs-first.density", "spacious", "user");
     expect(shell().preferences.inspect("prefs-first.density")).toMatchObject({
@@ -163,7 +167,7 @@ describe("astryxkit shell SDK", () => {
         app: "ring-app",
         feature: "ring-app.inbox",
         currentRing: "feature",
-      }
+      },
     );
 
     expect(resolved).toMatchObject({
@@ -191,10 +195,12 @@ describe("astryxkit shell SDK", () => {
     sdk.preferences.contributeValue(
       "custom-platform.globalDensity",
       "dense",
-      "platform"
+      "platform",
     );
 
-    expect(sdk.preferences.inspect("custom-platform.globalDensity")).toMatchObject({
+    expect(
+      sdk.preferences.inspect("custom-platform.globalDensity"),
+    ).toMatchObject({
       source: {
         ring: "platform",
         scope: "acme",
@@ -227,32 +233,32 @@ describe("astryxkit shell SDK", () => {
     const preferenceDebugBefore = shell().preferences.debugSnapshot();
 
     expect(host.paletteItems().map((item) => item.id)).not.toContain(
-      "feature-app.assist.run"
+      "feature-app.assist.run",
     );
     expect(
       host
         .settingsGroups()
         .flatMap((group) => group.settings)
-        .map((setting) => setting.key)
+        .map((setting) => setting.key),
     ).not.toContain("feature-app.assist.autoDraft");
 
     host.setFeatureEnabled("feature-app", "assist", true);
 
     expect(changedKeys).toEqual(["feature.feature-app.assist"]);
     expect(host.paletteItems().map((item) => item.id)).toContain(
-      "feature-app.assist.run"
+      "feature-app.assist.run",
     );
     expect(
       host
         .settingsGroups()
         .flatMap((group) => group.settings)
-        .map((setting) => setting.key)
+        .map((setting) => setting.key),
     ).toContain("feature-app.assist.autoDraft");
     expect(shell().commands.debugSnapshot().declareCalls).toBe(
-      commandDebugBefore.declareCalls
+      commandDebugBefore.declareCalls,
     );
     expect(shell().preferences.debugSnapshot().schemaDeclareCalls).toBe(
-      preferenceDebugBefore.schemaDeclareCalls
+      preferenceDebugBefore.schemaDeclareCalls,
     );
   });
 
@@ -333,14 +339,70 @@ describe("astryxkit shell SDK", () => {
     });
 
     expect(
-      sdk.commands.rankedPaletteItems("/", sdk.context).map((result) => result.command.id)
+      sdk.commands
+        .rankedPaletteItems("/", sdk.context)
+        .map((result) => result.command.id),
     ).toEqual(["prefix-app.openPage"]);
     expect(
-      sdk.commands.rankedPaletteItems(">", sdk.context).map((result) => result.command.id)
+      sdk.commands
+        .rankedPaletteItems(">", sdk.context)
+        .map((result) => result.command.id),
     ).toEqual(["prefix-app.runAction"]);
     expect(
-      sdk.commands.rankedPaletteItems("@", sdk.context).map((result) => result.command.id)
+      sdk.commands
+        .rankedPaletteItems("@", sdk.context)
+        .map((result) => result.command.id),
     ).toEqual(["prefix-app.entityInvoice"]);
+  });
+
+  it("supports first-class shortcodes for palette search and lookup", () => {
+    const sdk = shell();
+    sdk.commands.declare({
+      id: "tasks.task.pto.open",
+      appId: "tasks",
+      category: "Tasks",
+      title: "PTO reference",
+      route: "/app/tasks/T00000A",
+      shortcodes: [" T00000A ", "t00000a", "#T00000A"],
+    });
+    sdk.commands.declare({
+      id: "tasks.task.title-match.open",
+      appId: "tasks",
+      category: "Tasks",
+      title: "T00000A migration note",
+      route: "/app/tasks/migration-note",
+    });
+
+    expect(sdk.commands.get("tasks.task.pto.open")?.shortcodes).toEqual([
+      "T00000A",
+    ]);
+    expect(sdk.commands.findByShortcode("t00000a")?.id).toBe(
+      "tasks.task.pto.open",
+    );
+    expect(sdk.commands.findByShortcode("#T00000A")?.id).toBe(
+      "tasks.task.pto.open",
+    );
+
+    const host = new ShellHost({ includeDefaultPlatformCommands: false });
+    const hostApp = createTestApp("host-shortcodes");
+    hostApp.manifest.commands[0] = {
+      ...hostApp.manifest.commands[0],
+      shortcodes: ["HOST-42"],
+    };
+    host.register(hostApp.manifest);
+
+    expect(host.commandForShortcode("#host-42")?.id).toBe(
+      "host-shortcodes.open",
+    );
+    expect(
+      sdk.commands.rankedPaletteItems("t00000a", sdk.context).map((result) => ({
+        id: result.command.id,
+        score: result.textScore,
+      })),
+    ).toEqual([
+      { id: "tasks.task.pto.open", score: 1500 },
+      { id: "tasks.task.title-match.open", score: 1000 },
+    ]);
   });
 
   it("registers dynamic command sources and disposes them with component lifecycle", () => {
@@ -361,13 +423,17 @@ describe("astryxkit shell SDK", () => {
     });
 
     expect(
-      sdk.commands.rankedPaletteItems("", sdk.context).map((result) => result.command.id)
+      sdk.commands
+        .rankedPaletteItems("", sdk.context)
+        .map((result) => result.command.id),
     ).toContain("feature-app.contextual");
 
     registration.dispose();
 
     expect(
-      sdk.commands.rankedPaletteItems("", sdk.context).map((result) => result.command.id)
+      sdk.commands
+        .rankedPaletteItems("", sdk.context)
+        .map((result) => result.command.id),
     ).not.toContain("feature-app.contextual");
   });
 
@@ -405,12 +471,12 @@ function createTestApp(id: string): TestApp {
         context.shell.commands.bind(`${id}.open`, ({ command }) => {
           runs.push(command.id);
           context.host.navigate(context.app.route);
-        })
+        }),
       );
       context.disposeWithApp(
         context.shell.commands.bind(`${id}.focused`, ({ command }) => {
           runs.push(command.id);
-        })
+        }),
       );
 
       return {

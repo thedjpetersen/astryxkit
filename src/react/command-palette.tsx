@@ -30,6 +30,7 @@ type ShellCommandItem = {
   label: string;
   result?: RankedCommandResult;
   ringLabel: string;
+  shortcodes: string[];
   shortcut?: CommandShortcut;
 };
 
@@ -61,12 +62,22 @@ const styles = stylex.create({
     borderBlockEndWidth: "var(--border-width)",
   },
   results: {
-    maxHeight: "min(calc(var(--size-element-lg) * 11), calc(100vh - var(--spacing-12)))",
+    maxHeight:
+      "min(calc(var(--size-element-lg) * 11), calc(100vh - var(--spacing-12)))",
     minHeight: "calc(var(--size-element-lg) * 5)",
     overflowY: "auto",
   },
   rowMeta: {
     minWidth: 0,
+  },
+  shortcodeToken: {
+    backgroundColor: "var(--color-background-muted)",
+    borderColor: "var(--color-border)",
+    borderRadius: "var(--radius-inner)",
+    borderStyle: "solid",
+    borderWidth: "var(--border-width)",
+    paddingBlock: "var(--spacing-0-5)",
+    paddingInline: "var(--spacing-1)",
   },
 });
 
@@ -85,7 +96,7 @@ export function ShellCommandPalette({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const items = useMemo(
     () => buildCommandItems(host, query, drillParent),
-    [drillParent, host, query, visibleCommands]
+    [drillParent, host, query, visibleCommands],
   );
   const groups = useMemo(() => groupCommandItems(items), [items]);
   const placeholder = drillParent
@@ -103,7 +114,7 @@ export function ShellCommandPalette({
 
   useEffect(() => {
     setSelectedIndex((currentIndex) =>
-      items.length === 0 ? 0 : Math.min(currentIndex, items.length - 1)
+      items.length === 0 ? 0 : Math.min(currentIndex, items.length - 1),
     );
   }, [items.length]);
 
@@ -134,7 +145,7 @@ export function ShellCommandPalette({
     if (event.key === "ArrowDown") {
       event.preventDefault();
       setSelectedIndex((currentIndex) =>
-        items.length === 0 ? 0 : Math.min(currentIndex + 1, items.length - 1)
+        items.length === 0 ? 0 : Math.min(currentIndex + 1, items.length - 1),
       );
       return;
     }
@@ -228,7 +239,10 @@ export function ShellCommandPalette({
                       <Text type="supporting" weight="medium">
                         {group.label}
                       </Text>
-                      <Badge label={String(group.items.length)} variant="neutral" />
+                      <Badge
+                        label={String(group.items.length)}
+                        variant="neutral"
+                      />
                     </HStack>
                   }
                 >
@@ -246,7 +260,9 @@ export function ShellCommandPalette({
               <VStack gap={2} align="center">
                 <Icon icon="search" color="secondary" />
                 <Text type="label">No matching commands</Text>
-                <Text type="supporting">Try a different action, page, or entity.</Text>
+                <Text type="supporting">
+                  Try a different action, page, or entity.
+                </Text>
               </VStack>
             )}
           </VStack>
@@ -271,7 +287,8 @@ function CommandListItem({
   isSelected: boolean;
   onSelect: () => void;
 }) {
-  const childCount = item.command.childCount ?? item.command.children?.length ?? 0;
+  const childCount =
+    item.command.childCount ?? item.command.children?.length ?? 0;
 
   return (
     <ListItem
@@ -284,6 +301,20 @@ function CommandListItem({
           <Text type="code" color="secondary" maxLines={1}>
             {item.command.id}
           </Text>
+          {item.shortcodes.length > 0 ? (
+            <HStack gap={1} align="center" wrap="wrap">
+              {item.shortcodes.map((shortcode) => (
+                <Text
+                  key={shortcode}
+                  type="code"
+                  color="secondary"
+                  xstyle={styles.shortcodeToken}
+                >
+                  {shortcode}
+                </Text>
+              ))}
+            </HStack>
+          ) : null}
         </VStack>
       }
       isSelected={isSelected}
@@ -298,9 +329,14 @@ function CommandListItem({
           {childCount > 0 ? (
             <Badge label={`${childCount} actions`} variant="blue" />
           ) : (
-            <Badge label={item.ringLabel} variant={ringVariant(item.command.ring)} />
+            <Badge
+              label={item.ringLabel}
+              variant={ringVariant(item.command.ring)}
+            />
           )}
-          {childCount > 0 ? <Icon icon="chevronRight" color="secondary" /> : null}
+          {childCount > 0 ? (
+            <Icon icon="chevronRight" color="secondary" />
+          ) : null}
         </HStack>
       }
       onClick={onSelect}
@@ -311,7 +347,7 @@ function CommandListItem({
 function buildCommandItems(
   host: ShellHost,
   query: string,
-  drillParent?: CommandContribution
+  drillParent?: CommandContribution,
 ): ShellCommandItem[] {
   if (drillParent) {
     return [
@@ -322,9 +358,9 @@ function buildCommandItems(
     ];
   }
 
-  return host.paletteResults(query).map((result) =>
-    commandToItem(result.command, result)
-  );
+  return host
+    .paletteResults(query)
+    .map((result) => commandToItem(result.command, result));
 }
 
 function createBackItem(parent: CommandContribution): ShellCommandItem {
@@ -348,13 +384,14 @@ function createBackItem(parent: CommandContribution): ShellCommandItem {
     iconColor: "secondary",
     isBackItem: true,
     ringLabel: "Back",
+    shortcodes: [],
   };
 }
 
 function commandToItem(
   command: CommandContribution,
   result: RankedCommandResult,
-  drillParent?: CommandContribution
+  drillParent?: CommandContribution,
 ): ShellCommandItem {
   return {
     id: command.id,
@@ -366,6 +403,7 @@ function commandToItem(
     iconColor: iconColorForResult(result),
     result,
     ringLabel: ringLabel(result.source.ring),
+    shortcodes: command.shortcodes ?? [],
     shortcut: command.shortcut,
   };
 }
@@ -437,7 +475,7 @@ function ShellCommandPaletteFooter({ isDrilling }: { isDrilling: boolean }) {
 
 function groupLabelForResult(
   result: RankedCommandResult,
-  drillParent?: CommandContribution
+  drillParent?: CommandContribution,
 ) {
   if (drillParent) {
     return `${drillParent.title} actions`;
@@ -497,7 +535,7 @@ function ringVariant(ring?: string) {
 function shortcutToKbd(shortcut: CommandShortcut) {
   return [
     ...(shortcut.modifiers ?? []).map((modifier) =>
-      modifier === "meta" ? "mod" : modifier
+      modifier === "meta" ? "mod" : modifier,
     ),
     shortcut.key,
   ].join("+");
@@ -533,5 +571,7 @@ function toIconName(icon?: string): IconName {
     "wrench",
   ];
 
-  return allowedIcons.includes(icon as IconName) ? (icon as IconName) : "wrench";
+  return allowedIcons.includes(icon as IconName)
+    ? (icon as IconName)
+    : "wrench";
 }

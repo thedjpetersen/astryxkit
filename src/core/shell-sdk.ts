@@ -13,12 +13,7 @@ export type CommandKind = "action" | "entity" | "help" | "page";
 export type CommandVisibility = "self" | "product";
 
 export type PreferenceScope =
-  | "default"
-  | "platform"
-  | "product"
-  | "app"
-  | "feature"
-  | "user";
+  "default" | "platform" | "product" | "app" | "feature" | "user";
 
 export type PreferenceValueLayer = "seed" | "user";
 
@@ -40,7 +35,7 @@ export type CommandExecutionContext = {
 };
 
 export type CommandHandler = (
-  context: CommandExecutionContext
+  context: CommandExecutionContext,
 ) => Promise<void> | void;
 
 export type CommandShortcut = {
@@ -75,6 +70,7 @@ export type CommandContribution = {
   ring?: CommandRing;
   route?: string;
   section?: string;
+  shortcodes?: string[];
   shortcut?: CommandShortcut;
   sourceId?: string;
   sourceLabel?: string;
@@ -362,7 +358,11 @@ export class CommandRegistry {
   declare(command: CommandContribution): Disposable {
     const normalizedCommand = normalizeCommand(command);
 
-    assertNamespaced(normalizedCommand.id, normalizedCommand.appId, "Command id");
+    assertNamespaced(
+      normalizedCommand.id,
+      normalizedCommand.appId,
+      "Command id",
+    );
 
     if (this.commands.has(normalizedCommand.id)) {
       throw new Error(`Command already declared: ${normalizedCommand.id}`);
@@ -387,7 +387,7 @@ export class CommandRegistry {
     const store = new DisposableStore();
     const registerCommand = (
       command: CommandContribution,
-      parent?: CommandContribution
+      parent?: CommandContribution,
     ) => {
       const normalizedCommand = normalizeCommand({
         ...command,
@@ -417,7 +417,7 @@ export class CommandRegistry {
             sourceId: child.sourceId ?? normalizedCommand.sourceId,
             sourceLabel: child.sourceLabel ?? normalizedCommand.sourceLabel,
           },
-          normalizedCommand
+          normalizedCommand,
         );
       }
     };
@@ -464,23 +464,41 @@ export class CommandRegistry {
     return this.commands.get(commandId);
   }
 
+  findByShortcode(shortcode: string): CommandContribution | undefined {
+    const normalizedShortcode = normalizeShortcodeForMatch(shortcode);
+
+    if (!normalizedShortcode) {
+      return undefined;
+    }
+
+    return Array.from(this.commands.values())
+      .sort(compareCommands)
+      .find((command) =>
+        command.shortcodes?.some(
+          (item) => normalizeShortcodeForMatch(item) === normalizedShortcode,
+        ),
+      );
+  }
+
   isBound(commandId: string): boolean {
     return this.handlers.has(commandId);
   }
 
   paletteItems(context: ContextKeyService): CommandContribution[] {
     return Array.from(this.commands.values())
-      .filter((command) => !command.paletteHidden && context.matches(command.when))
+      .filter(
+        (command) => !command.paletteHidden && context.matches(command.when),
+      )
       .sort(compareCommands);
   }
 
   rankedPaletteItems(
     query: string,
-    context: ContextKeyService
+    context: ContextKeyService,
   ): RankedCommandResult[] {
     const { prefix, query: searchQuery } = parseCommandQuery(query);
     const commands = this.paletteItems(context).filter((command) =>
-      prefix ? prefix.filter(command) : true
+      prefix ? prefix.filter(command) : true,
     );
     const ranked = this.rankCommands(commands, searchQuery, prefix, context);
 
@@ -491,11 +509,13 @@ export class CommandRegistry {
     const recent = this.history
       .map((entry) => this.commands.get(entry.actionId))
       .filter((command): command is CommandContribution =>
-        Boolean(command && !command.paletteHidden && context.matches(command.when))
+        Boolean(
+          command && !command.paletteHidden && context.matches(command.when),
+        ),
       )
       .filter(
         (command, index, commands) =>
-          commands.findIndex((item) => item.id === command.id) === index
+          commands.findIndex((item) => item.id === command.id) === index,
       )
       .map((command) => ({
         command,
@@ -512,7 +532,7 @@ export class CommandRegistry {
   rankedChildItems(
     parentId: string,
     query: string,
-    context: ContextKeyService
+    context: ContextKeyService,
   ): RankedCommandResult[] {
     const parent = this.commands.get(parentId);
 
@@ -526,10 +546,12 @@ export class CommandRegistry {
     const { prefix, query: searchQuery } = parseCommandQuery(query);
 
     return this.rankCommands(
-      childCommands.filter((command) => (prefix ? prefix.filter(command) : true)),
+      childCommands.filter((command) =>
+        prefix ? prefix.filter(command) : true,
+      ),
       searchQuery,
       prefix,
-      context
+      context,
     );
   }
 
@@ -606,7 +628,7 @@ export class CommandRegistry {
     commands: CommandContribution[],
     query: string,
     prefix: CommandPrefixMode | undefined,
-    context: ContextKeyService
+    context: ContextKeyService,
   ): RankedCommandResult[] {
     return commands
       .filter((command) => context.matches(command.when))
@@ -662,7 +684,7 @@ export class PreferenceSnapshot {
   get(
     ring: PreferenceRing,
     scope: string,
-    key: string
+    key: string,
   ): PreferenceValueRecord | null {
     const id = preferenceRecordId(ring, scope, key);
     return this.userValues.get(id) ?? this.seedValues.get(id) ?? null;
@@ -673,7 +695,7 @@ export function resolvePreference(
   snapshot: PreferenceSnapshot,
   schema: PreferenceSchema,
   context: RingContext,
-  platformId = defaultPlatformId
+  platformId = defaultPlatformId,
 ): ResolvedPreference {
   const normalizedSchema = normalizePreferenceSchema(schema, platformId);
   const rings = [
@@ -745,7 +767,7 @@ export class PreferencesStore {
     assertNamespaced(
       normalizedSchema.key,
       normalizedSchema.appId,
-      "Preference key"
+      "Preference key",
     );
 
     if (this.schemas.has(normalizedSchema.key)) {
@@ -768,7 +790,7 @@ export class PreferencesStore {
   contributeValue(
     key: string,
     value: PreferenceValue,
-    scope: Exclude<PreferenceScope, "default" | "user">
+    scope: Exclude<PreferenceScope, "default" | "user">,
   ): Disposable {
     const target = this.valueTargetForKey(key, scope);
     const recordId = preferenceRecordId(target.ring, target.scope, key);
@@ -802,11 +824,11 @@ export class PreferencesStore {
   set(
     key: string,
     value: PreferenceValue,
-    scope: Exclude<PreferenceScope, "default">
+    scope: Exclude<PreferenceScope, "default">,
   ) {
     const target = this.valueTargetForKey(
       key,
-      scope === "user" ? undefined : scope
+      scope === "user" ? undefined : scope,
     );
     this.validateValue(key, value);
     this.userValues.set(preferenceRecordId(target.ring, target.scope, key), {
@@ -823,7 +845,7 @@ export class PreferencesStore {
   reset(key: string, scope: Exclude<PreferenceScope, "default">) {
     const target = this.valueTargetForKey(
       key,
-      scope === "user" ? undefined : scope
+      scope === "user" ? undefined : scope,
     );
     this.userValues.delete(preferenceRecordId(target.ring, target.scope, key));
     this.emit();
@@ -846,14 +868,11 @@ export class PreferencesStore {
 
     return this.inspectWithContext(
       key,
-      contextForSchema(schema, this.platformId)
+      contextForSchema(schema, this.platformId),
     );
   }
 
-  inspectWithContext(
-    key: string,
-    context: RingContext
-  ): PreferenceInspection {
+  inspectWithContext(key: string, context: RingContext): PreferenceInspection {
     const schema = this.schemas.get(key);
 
     if (!schema) {
@@ -869,11 +888,16 @@ export class PreferencesStore {
     }
 
     const snapshot = this.snapshot();
-    const resolved = resolvePreference(snapshot, schema, context, this.platformId);
+    const resolved = resolvePreference(
+      snapshot,
+      schema,
+      context,
+      this.platformId,
+    );
     const layers = this.layersForKey(key, context, schema);
     const userTarget = this.valueTargetForKey(key);
     const hasUserOverride = this.userValues.has(
-      preferenceRecordId(userTarget.ring, userTarget.scope, key)
+      preferenceRecordId(userTarget.ring, userTarget.scope, key),
     );
 
     return {
@@ -903,7 +927,7 @@ export class PreferencesStore {
 
       const normalizedSchema = normalizePreferenceSchema(
         schema,
-        this.platformId
+        this.platformId,
       );
       const id = `${normalizedSchema.ring}:${normalizedSchema.scope}:${normalizedSchema.category}`;
       const existingGroup = groups.get(id);
@@ -977,7 +1001,7 @@ export class PreferencesStore {
   private layersForKey(
     key: string,
     context: RingContext,
-    schema: PreferenceSchema
+    schema: PreferenceSchema,
   ): PreferenceInspection["layers"] {
     const layers: PreferenceInspection["layers"] = {
       default: schema.defaultValue,
@@ -1012,7 +1036,7 @@ export class PreferencesStore {
 
   private valueTargetForKey(
     key: string,
-    ringOverride?: Exclude<PreferenceScope, "default" | "user">
+    ringOverride?: Exclude<PreferenceScope, "default" | "user">,
   ): { ring: PreferenceRing; scope: string } {
     const schema = this.schemas.get(key);
 
@@ -1040,7 +1064,9 @@ export class PreferencesStore {
       const allowedValues = schema.options?.map((option) => option.value) ?? [];
 
       if (!allowedValues.includes(value)) {
-        throw new Error(`Preference ${key} does not allow value ${String(value)}`);
+        throw new Error(
+          `Preference ${key} does not allow value ${String(value)}`,
+        );
       }
 
       return;
@@ -1048,7 +1074,7 @@ export class PreferencesStore {
 
     if (typeof value !== schema.type) {
       throw new Error(
-        `Preference ${key} expects ${schema.type}; received ${typeof value}`
+        `Preference ${key} expects ${schema.type}; received ${typeof value}`,
       );
     }
   }
@@ -1076,7 +1102,7 @@ export class EventBus {
 
   on<TPayload>(
     type: string,
-    listener: (event: ShellEvent<TPayload>) => void
+    listener: (event: ShellEvent<TPayload>) => void,
   ): Disposable {
     const listeners =
       this.listeners.get(type) ?? new Set<(event: ShellEvent) => void>();
@@ -1189,8 +1215,10 @@ const builtInCommandPrefixes: CommandPrefixMode[] = [
 
 function normalizeCommand(command: CommandContribution): CommandContribution {
   const ring =
-    command.ring ?? (command.featureId ? "feature" : defaultCommandRing(command));
+    command.ring ??
+    (command.featureId ? "feature" : defaultCommandRing(command));
   const kind = command.kind ?? commandKind({ ...command, ring });
+  const shortcodes = normalizeShortcodes(command.shortcodes);
 
   return {
     ...command,
@@ -1198,9 +1226,35 @@ function normalizeCommand(command: CommandContribution): CommandContribution {
     kind,
     ring,
     section: command.section ?? command.category,
+    shortcodes,
     sourceId: command.sourceId ?? `${ring}:${command.appId}`,
     sourceLabel: command.sourceLabel ?? command.category,
   };
+}
+
+function normalizeShortcodes(
+  shortcodes: string[] | undefined,
+): string[] | undefined {
+  const normalized: string[] = [];
+  const seen = new Set<string>();
+
+  for (const shortcode of shortcodes ?? []) {
+    const trimmed = shortcode.trim();
+    const key = normalizeShortcodeForMatch(trimmed);
+
+    if (!trimmed || !key || seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    normalized.push(trimmed);
+  }
+
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function normalizeShortcodeForMatch(shortcode: string): string {
+  return shortcode.trim().replace(/^#/, "").toLowerCase();
 }
 
 function defaultCommandRing(command: CommandContribution): CommandRing {
@@ -1237,7 +1291,7 @@ function parseCommandQuery(query: string): {
 } {
   const trimmed = query.trimStart();
   const prefix = builtInCommandPrefixes.find((mode) =>
-    trimmed.startsWith(mode.prefix)
+    trimmed.startsWith(mode.prefix),
   );
 
   if (!prefix) {
@@ -1278,14 +1332,24 @@ function ringScore(ring: CommandRing): number {
 
 function fuzzyCommandMatch(
   command: CommandContribution,
-  query: string
+  query: string,
 ): { ranges: Array<[number, number]>; score: number } {
   const normalizedQuery = query.trim().toLowerCase();
+  const normalizedShortcodeQuery = normalizeShortcodeForMatch(query);
 
   if (!normalizedQuery) {
     return {
       ranges: [],
       score: 1,
+    };
+  }
+
+  const shortcodeScore = scoreShortcodeMatch(command, normalizedShortcodeQuery);
+
+  if (shortcodeScore > 0) {
+    return {
+      ranges: [],
+      score: shortcodeScore,
     };
   }
 
@@ -1324,6 +1388,7 @@ function fuzzyCommandMatch(
     command.description,
     command.entity?.label,
     ...(command.keywords ?? []),
+    ...(command.shortcodes ?? []),
   ]
     .filter((value): value is string => Boolean(value))
     .join(" ")
@@ -1342,9 +1407,35 @@ function fuzzyCommandMatch(
   };
 }
 
+function scoreShortcodeMatch(
+  command: CommandContribution,
+  normalizedQuery: string,
+): number {
+  if (!normalizedQuery) {
+    return 0;
+  }
+
+  for (const shortcode of command.shortcodes ?? []) {
+    const normalizedShortcode = normalizeShortcodeForMatch(shortcode);
+
+    if (normalizedShortcode === normalizedQuery) {
+      return 1500;
+    }
+
+    if (normalizedShortcode.startsWith(normalizedQuery)) {
+      return (
+        1200 -
+        Math.min(normalizedShortcode.length - normalizedQuery.length, 100)
+      );
+    }
+  }
+
+  return 0;
+}
+
 function scoreSubsequence(
   value: string,
-  query: string
+  query: string,
 ): { ranges: Array<[number, number]>; score: number } {
   let queryIndex = 0;
   let firstMatch = -1;
@@ -1395,7 +1486,7 @@ function scoreSubsequence(
 
 function normalizePreferenceSchema(
   schema: PreferenceSchema,
-  platformId: string
+  platformId: string,
 ): PreferenceSchema & {
   ring: PreferenceRing;
   scope: string;
@@ -1411,7 +1502,7 @@ function normalizePreferenceSchema(
 
 function contextForSchema(
   schema: PreferenceSchema,
-  platformId: string
+  platformId: string,
 ): RingContext {
   const normalizedSchema = normalizePreferenceSchema(schema, platformId);
 
@@ -1419,7 +1510,9 @@ function contextForSchema(
     platform: platformId,
     product: schema.productId,
     app: schema.appId,
-    feature: schema.featureId ? `${schema.appId}.${schema.featureId}` : undefined,
+    feature: schema.featureId
+      ? `${schema.appId}.${schema.featureId}`
+      : undefined,
     currentRing: normalizedSchema.ring,
   };
 }
@@ -1427,7 +1520,7 @@ function contextForSchema(
 function scopeForRing(
   schema: PreferenceSchema,
   ring: PreferenceRing,
-  platformId: string
+  platformId: string,
 ): string {
   if (ring === "platform") {
     return platformId;
@@ -1438,7 +1531,9 @@ function scopeForRing(
   }
 
   if (ring === "feature") {
-    return schema.featureId ? `${schema.appId}.${schema.featureId}` : schema.appId;
+    return schema.featureId
+      ? `${schema.appId}.${schema.featureId}`
+      : schema.appId;
   }
 
   return schema.appId;
@@ -1447,14 +1542,14 @@ function scopeForRing(
 function preferenceRecordId(
   ring: PreferenceRing,
   scope: string,
-  key: string
+  key: string,
 ): string {
   return `${ring}:${scope}:${key}`;
 }
 
 function migratePreferenceValue(
   value: PreferenceValue,
-  schema: PreferenceSchema
+  schema: PreferenceSchema,
 ): PreferenceValue {
   if (!schema.migrations) {
     return value;
@@ -1496,7 +1591,7 @@ function parseContextLiteral(raw: string): ContextValue {
 
 function compareCommands(
   first: CommandContribution,
-  second: CommandContribution
+  second: CommandContribution,
 ): number {
   return (
     (second.priority ?? 0) - (first.priority ?? 0) ||
@@ -1507,7 +1602,7 @@ function compareCommands(
 
 function compareRankedCommands(
   first: RankedCommandResult,
-  second: RankedCommandResult
+  second: RankedCommandResult,
 ): number {
   return (
     second.ringScore - first.ringScore ||

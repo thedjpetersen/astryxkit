@@ -56,9 +56,18 @@ Command ranking considers:
 
 - command ring: platform, product, app, or feature;
 - prefix mode: actions (`>`), pages (`/`), entities (`@`), or help (`?`);
+- shortcode matches for stable human-facing identifiers;
 - fuzzy text score;
 - context expressions from `when`;
 - recent command history.
+
+Use `shortcodes` for canonical record or workflow IDs that users can type,
+share, or route to directly, such as `T00000A`, `INV-2048`, or `CASE-17`.
+Use `keywords` for loose discovery terms and synonyms. Shortcode matching is
+case-insensitive, accepts a leading `#` in the query, and exact shortcode
+matches rank ahead of normal title and keyword matches within the same command
+ring. Host products can call `host.commandForShortcode(code)` when implementing
+Stitchdash-style short-link redirects or deep-link resolution.
 
 ### Preferences
 

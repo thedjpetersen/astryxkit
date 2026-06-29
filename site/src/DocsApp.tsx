@@ -180,6 +180,7 @@ const commandSnippet = `const refreshCommand: CommandContribution = {
   icon: "check",
   kind: "action",
   ring: "app",
+  shortcodes: ["CAT-REFRESH"],
   when: "appActive == 'catalog'",
   shortcut: { modifiers: ["meta", "shift"], key: "r" },
 };`;
@@ -1018,6 +1019,13 @@ const commandBehaviors: Surface[] = [
     icon: "arrowUp",
     title: "Useful defaults",
   },
+  {
+    body: "Shortcodes model stable human-facing IDs such as task codes, invoice codes, or support tickets without overloading search keywords.",
+    code: 'shortcodes: ["T00000A"]',
+    eyebrow: "Lookup",
+    icon: "copy",
+    title: "Addressable codes",
+  },
 ];
 
 type CommandKind = "action" | "entity" | "help" | "page";
@@ -1037,6 +1045,7 @@ type DemoCommand = {
   kind: CommandKind;
   keywords: string[];
   ring: CommandRing;
+  shortcodes?: string[];
   shortcut?: string;
   title: string;
   when?: string;
@@ -1090,6 +1099,7 @@ const demoCommands: DemoCommand[] = [
     keywords: ["refresh", "reload", "catalog"],
     ring: "app",
     shortcut: "Meta Shift R",
+    shortcodes: ["CAT-REFRESH"],
     title: "Refresh Catalog",
     when: "appActive == 'catalog'",
   },
@@ -1110,7 +1120,18 @@ const demoCommands: DemoCommand[] = [
     kind: "entity",
     keywords: ["customer", "owner", "account"],
     ring: "app",
+    shortcodes: ["CUST-2048"],
     title: "Customer Entity",
+  },
+  {
+    description:
+      "Open the task record addressed by its stable short code, matching the Stitchdash task-code pattern.",
+    id: "tasks.task.pto.open",
+    kind: "entity",
+    keywords: ["task", "pto", "ops"],
+    ring: "feature",
+    shortcodes: ["T00000A"],
+    title: "PTO Reference Task",
   },
   {
     description:
@@ -1389,6 +1410,13 @@ const apiRows: SpecRow[] = [
   },
   {
     detail:
+      "Looks up the command that owns a stable human-facing shortcode, useful when products implement short-link redirects.",
+    name: "host.commandForShortcode",
+    tag: "shortcodes",
+    tagVariant: "cyan",
+  },
+  {
+    detail:
       "Resolves platform, product, app, feature, user, and default layers while preserving inspection metadata.",
     name: "PreferencesStore",
     tag: "core",
@@ -1542,6 +1570,13 @@ const troubleshootingRows: SpecRow[] = [
     name: "Missing D1 binding",
     tag: "D1",
     tagVariant: "cyan",
+  },
+  {
+    detail:
+      "Declare stable IDs in command.shortcodes, not only keywords. Lookup is case-insensitive and accepts a leading # in the query.",
+    name: "Shortcode not found",
+    tag: "shortcodes",
+    tagVariant: "green",
   },
 ];
 
@@ -2391,6 +2426,39 @@ function Commands() {
               },
             ]}
           />
+          <SpecTable
+            caption="Command metadata"
+            rows={[
+              {
+                name: "shortcodes",
+                tag: "lookup",
+                tagVariant: "cyan",
+                detail:
+                  "Stable human-facing identifiers such as T00000A, INV-2048, or CASE-17. Exact and prefix matches rank above normal title and keyword matches.",
+              },
+              {
+                name: "keywords",
+                tag: "search",
+                tagVariant: "purple",
+                detail:
+                  "Discovery terms and synonyms. Use these for broad search, not for canonical record identifiers.",
+              },
+              {
+                name: "shortcut",
+                tag: "keyboard",
+                tagVariant: "blue",
+                detail:
+                  "A keyboard accelerator displayed in the palette. This is separate from textual shortcodes.",
+              },
+              {
+                name: "commandForShortcode",
+                tag: "routing",
+                tagVariant: "green",
+                detail:
+                  "Host lookup helper for products that want Stitchdash-style short-link redirects or deep-link resolution.",
+              },
+            ]}
+          />
         </section>
         <CodeBlock
           title="command.ts"
@@ -2490,12 +2558,15 @@ function CommandLab() {
                   <Text as="p" display="block" color="secondary">
                     {command.description}
                   </Text>
-                  {command.when || command.shortcut ? (
+                  {command.when || command.shortcut || command.shortcodes ? (
                     <footer {...stylex.props(styles.resultMeta)}>
                       {command.when ? <Code>{command.when}</Code> : null}
                       {command.shortcut ? (
                         <Code>{command.shortcut}</Code>
                       ) : null}
+                      {command.shortcodes?.map((shortcode) => (
+                        <Code key={shortcode}>{shortcode}</Code>
+                      ))}
                     </footer>
                   ) : null}
                 </section>
@@ -2576,7 +2647,21 @@ function scoreCommandText(command: DemoCommand, query: string): number {
   const id = command.id.toLowerCase();
   const description = command.description.toLowerCase();
   const keywords = command.keywords.join(" ").toLowerCase();
+  const shortcodes = command.shortcodes ?? [];
   let score = 0;
+
+  for (const shortcode of shortcodes) {
+    const normalizedShortcode = shortcode.replace(/^#/, "").toLowerCase();
+    const normalizedQuery = query.replace(/^#/, "");
+
+    if (normalizedShortcode === normalizedQuery) {
+      score += 22;
+    } else if (normalizedShortcode.startsWith(normalizedQuery)) {
+      score += 16;
+    } else if (normalizedShortcode.includes(normalizedQuery)) {
+      score += 8;
+    }
+  }
 
   if (title.includes(query)) {
     score += title.startsWith(query) ? 14 : 10;

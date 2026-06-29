@@ -68,14 +68,14 @@ export type ShellAppInstance = Disposable & {
 
 export type ShellAppModule = {
   activate: (
-    context: ShellAppActivationContext
+    context: ShellAppActivationContext,
   ) => Promise<ShellAppInstance> | ShellAppInstance;
 };
 
 export type ShellAppActivationContext = {
   app: ShellAppManifest;
   disposeWithApp: <TDisposable extends Disposable>(
-    disposable: TDisposable
+    disposable: TDisposable,
   ) => TDisposable;
   host: ShellHost;
   shell: ShellSDK;
@@ -119,10 +119,12 @@ export class ShellHost implements Disposable {
         if (this.manifests.has(command.appId)) {
           await this.activate(command.appId);
         }
-      })
+      }),
     );
     this.registrations.add(this.shellSdk.commands.subscribe(() => this.emit()));
-    this.registrations.add(this.shellSdk.preferences.subscribe(() => this.emit()));
+    this.registrations.add(
+      this.shellSdk.preferences.subscribe(() => this.emit()),
+    );
     this.registrations.add(this.shellSdk.context.subscribe(() => this.emit()));
 
     for (const eventType of options.eventTypes ?? []) {
@@ -130,7 +132,7 @@ export class ShellHost implements Disposable {
         this.shellSdk.events.on(eventType, (event) => {
           this.hostEvents.unshift(event);
           this.emit();
-        })
+        }),
       );
     }
 
@@ -140,8 +142,8 @@ export class ShellHost implements Disposable {
           createPlatformCommandSource({
             docsRoute: options.defaultDocsRoute,
             preferencesRoute: options.preferencesRoute,
-          })
-        )
+          }),
+        ),
       );
     }
   }
@@ -167,8 +169,8 @@ export class ShellHost implements Disposable {
         this.shellSdk.preferences.contributeValue(
           preferenceDefault.key,
           preferenceDefault.value,
-          preferenceDefault.ring
-        )
+          preferenceDefault.ring,
+        ),
       );
     }
 
@@ -211,7 +213,7 @@ export class ShellHost implements Disposable {
 
   getManifestForPathname(pathname: string): ShellAppManifest | undefined {
     return Array.from(this.manifests.values()).find((manifest) =>
-      isRouteMatch(manifest.route, pathname)
+      isRouteMatch(manifest.route, pathname),
     );
   }
 
@@ -234,7 +236,7 @@ export class ShellHost implements Disposable {
   paletteResults(query = ""): RankedCommandResult[] {
     return this.shellSdk.commands.rankedPaletteItems(
       query,
-      this.shellSdk.context
+      this.shellSdk.context,
     );
   }
 
@@ -242,8 +244,12 @@ export class ShellHost implements Disposable {
     return this.shellSdk.commands.rankedChildItems(
       parentId,
       query,
-      this.shellSdk.context
+      this.shellSdk.context,
     );
+  }
+
+  commandForShortcode(shortcode: string): CommandContribution | undefined {
+    return this.shellSdk.commands.findByShortcode(shortcode);
   }
 
   settingsGroups(): SettingsGroup[] {
