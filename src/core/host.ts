@@ -53,6 +53,16 @@ export type ShellAppManifest = {
   preferences?: PreferenceSchema[];
 };
 
+export type ShellTopNavMountArea = "header" | "start" | "center" | "end";
+
+export type ShellTopNavMountContribution = {
+  area: ShellTopNavMountArea;
+  content: ReactNode;
+  id: string;
+  appId?: string;
+  order?: number;
+};
+
 export type ShellAppRenderProps = {
   host: ShellHost;
   manifest: ShellAppManifest;
@@ -106,6 +116,10 @@ export class ShellHost implements Disposable {
   private registrations = new DisposableStore();
   private readonly shellSdk: ShellSDK;
   private readonly hostEvents: ShellEvent[] = [];
+  private readonly topNavMountsById = new Map<
+    string,
+    ShellTopNavMountContribution
+  >();
   private version = 0;
 
   constructor(options: ShellHostOptions = {}) {
@@ -225,6 +239,41 @@ export class ShellHost implements Disposable {
     return this.shellSdk;
   }
 
+  mountTopNav(contribution: ShellTopNavMountContribution): Disposable {
+    if (this.topNavMountsById.has(contribution.id)) {
+      throw new Error(`Top nav mount already registered: ${contribution.id}`);
+    }
+
+    this.topNavMountsById.set(contribution.id, contribution);
+    this.emit();
+
+    return {
+      dispose: () => {
+        if (!this.topNavMountsById.has(contribution.id)) {
+          return;
+        }
+
+        this.topNavMountsById.delete(contribution.id);
+        this.emit();
+      },
+    };
+  }
+
+  updateTopNavMount(contribution: ShellTopNavMountContribution) {
+    if (!this.topNavMountsById.has(contribution.id)) {
+      throw new Error(`Unknown top nav mount: ${contribution.id}`);
+    }
+
+    this.topNavMountsById.set(contribution.id, contribution);
+    this.emit();
+  }
+
+  topNavMounts(area?: ShellTopNavMountArea): ShellTopNavMountContribution[] {
+    return Array.from(this.topNavMountsById.values())
+      .filter((contribution) => area == null || contribution.area === area)
+      .sort(compareTopNavMounts);
+  }
+
   activeApp(): ActiveShellApp | undefined {
     return this.active;
   }
@@ -311,6 +360,7 @@ export class ShellHost implements Disposable {
     }
 
     current.store.dispose();
+    this.deleteTopNavMountsForApp(current.manifest.id);
     this.active = undefined;
     this.shellSdk.context.set("appActive", undefined);
     this.emit();
@@ -371,6 +421,27 @@ export class ShellHost implements Disposable {
       listener();
     }
   }
+
+  private deleteTopNavMountsForApp(appId: string) {
+    for (const contribution of this.topNavMountsById.values()) {
+      if (contribution.appId === appId) {
+        this.topNavMountsById.delete(contribution.id);
+      }
+    }
+  }
+}
+
+function compareTopNavMounts(
+  left: ShellTopNavMountContribution,
+  right: ShellTopNavMountContribution,
+) {
+  const orderDiff = (left.order ?? 0) - (right.order ?? 0);
+
+  if (orderDiff !== 0) {
+    return orderDiff;
+  }
+
+  return left.id.localeCompare(right.id);
 }
 
 export function createPlatformCommandSource({

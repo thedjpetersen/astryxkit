@@ -278,6 +278,88 @@ describe("astryxkit shell SDK", () => {
     });
   });
 
+  it("mounts top nav areas and clears app-scoped mounts on deactivation", async () => {
+    const host = new ShellHost();
+    const app = createTestApp("chrome-app");
+    host.register(app.manifest);
+
+    const globalEndMount = host.mountTopNav({
+      id: "global.end",
+      area: "end",
+      content: "Global",
+      order: 20,
+    });
+    const globalStartMount = host.mountTopNav({
+      id: "global.start",
+      area: "end",
+      content: "First",
+      order: 10,
+    });
+    const globalHeaderMount = host.mountTopNav({
+      id: "global.header",
+      area: "header",
+      content: "Global header",
+    });
+
+    expect(host.topNavMounts("end").map((mount) => mount.id)).toEqual([
+      "global.start",
+      "global.end",
+    ]);
+
+    host.updateTopNavMount({
+      id: "global.end",
+      area: "end",
+      content: "Global updated",
+      order: 5,
+    });
+
+    expect(host.topNavMounts("end").map((mount) => mount.id)).toEqual([
+      "global.end",
+      "global.start",
+    ]);
+    expect(host.topNavMounts("end")[0]?.content).toBe("Global updated");
+
+    await host.activate(app.manifest.id);
+    host.mountTopNav({
+      id: "chrome-app.header",
+      appId: app.manifest.id,
+      area: "header",
+      content: "Chrome app header",
+      order: -1,
+    });
+    host.mountTopNav({
+      id: "chrome-app.center",
+      appId: app.manifest.id,
+      area: "center",
+      content: "Chrome app",
+    });
+
+    expect(host.topNavMounts("header").map((mount) => mount.id)).toEqual([
+      "chrome-app.header",
+      "global.header",
+    ]);
+    expect(host.topNavMounts("center").map((mount) => mount.id)).toEqual([
+      "chrome-app.center",
+    ]);
+
+    host.deactivate(app.manifest.id);
+
+    expect(host.topNavMounts("header").map((mount) => mount.id)).toEqual([
+      "global.header",
+    ]);
+    expect(host.topNavMounts("center")).toEqual([]);
+    expect(host.topNavMounts("end").map((mount) => mount.id)).toEqual([
+      "global.end",
+      "global.start",
+    ]);
+
+    globalHeaderMount.dispose();
+    globalStartMount.dispose();
+    globalEndMount.dispose();
+
+    expect(host.topNavMounts()).toEqual([]);
+  });
+
   it("ranks command palette results by ring before text relevance", () => {
     const sdk = shell();
     sdk.commands.declare({

@@ -11,6 +11,8 @@ export {
   type ShellFeatureContribution,
   type ShellHostOptions,
   type ShellPreferenceDefault,
+  type ShellTopNavMountArea,
+  type ShellTopNavMountContribution,
   type WorkspaceContext,
 } from "./host";
 export {

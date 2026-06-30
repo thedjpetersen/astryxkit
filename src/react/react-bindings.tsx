@@ -4,11 +4,17 @@ import { Heading } from "@astryxdesign/core/Heading";
 import { HStack } from "@astryxdesign/core/HStack";
 import { Text } from "@astryxdesign/core/Text";
 import { VStack } from "@astryxdesign/core/VStack";
-import { useEffect, useMemo, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import type {
   MicroAppRoute,
   ShellAppRenderProps,
   ShellHost,
+  ShellTopNavMountArea,
   WorkspaceContext,
 } from "../core/host";
 import {
@@ -71,6 +77,78 @@ export function useSettingsGroups(host: ShellHost) {
   const version = useHostVersion(host);
 
   return useMemo(() => host.settingsGroups(), [host, version]);
+}
+
+export function useShellTopNavMounts(
+  host: ShellHost,
+  area?: ShellTopNavMountArea,
+) {
+  const version = useHostVersion(host);
+
+  return useMemo(() => host.topNavMounts(area), [area, host, version]);
+}
+
+export function useShellTopNavMount({
+  appId,
+  area,
+  content,
+  host,
+  id,
+  order,
+}: {
+  appId?: string;
+  area: ShellTopNavMountArea;
+  content: ReactNode;
+  host: ShellHost;
+  id: string;
+  order?: number;
+}) {
+  useEffect(() => {
+    const registration = host.mountTopNav({
+      appId,
+      area,
+      content,
+      id,
+      order,
+    });
+
+    return () => {
+      registration.dispose();
+    };
+  }, [appId, area, host, id, order]);
+
+  useEffect(() => {
+    host.updateTopNavMount({
+      appId,
+      area,
+      content,
+      id,
+      order,
+    });
+  }, [appId, area, content, host, id, order]);
+}
+
+export function useShellTopNavHeader({
+  appId,
+  content,
+  host,
+  id,
+  order,
+}: {
+  appId?: string;
+  content: ReactNode;
+  host: ShellHost;
+  id: string;
+  order?: number;
+}) {
+  useShellTopNavMount({
+    appId,
+    area: "header",
+    content,
+    host,
+    id,
+    order,
+  });
 }
 
 export function useHostVersion(host: ShellHost) {

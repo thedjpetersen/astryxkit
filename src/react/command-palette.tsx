@@ -1,8 +1,7 @@
-import { Badge } from "@astryxdesign/core/Badge";
 import { CommandPaletteFooter } from "@astryxdesign/core/CommandPalette";
 import { Dialog } from "@astryxdesign/core/Dialog";
 import { HStack } from "@astryxdesign/core/HStack";
-import { Icon, type IconColor, type IconName } from "@astryxdesign/core/Icon";
+import { Icon } from "@astryxdesign/core/Icon";
 import { Kbd } from "@astryxdesign/core/Kbd";
 import { List, ListItem } from "@astryxdesign/core/List";
 import { Section } from "@astryxdesign/core/Section";
@@ -23,14 +22,10 @@ type ShellCommandItem = {
   command: CommandContribution;
   description: string;
   group: string;
-  icon: IconName;
-  iconColor: IconColor;
   id: string;
   isBackItem?: boolean;
   label: string;
   result?: RankedCommandResult;
-  ringLabel: string;
-  shortcodes: string[];
   shortcut?: CommandShortcut;
 };
 
@@ -43,18 +38,6 @@ const styles = stylex.create({
     flexWrap: "wrap",
     justifyContent: "space-between",
     rowGap: "var(--spacing-2)",
-  },
-  glyph: {
-    alignItems: "center",
-    backgroundColor: "var(--color-background-muted)",
-    borderColor: "var(--color-border)",
-    borderRadius: "var(--radius-element)",
-    borderStyle: "solid",
-    borderWidth: "var(--border-width)",
-    display: "inline-flex",
-    justifyContent: "center",
-    minHeight: "var(--size-element-md)",
-    minWidth: "var(--size-element-md)",
   },
   header: {
     borderBlockEndColor: "var(--color-border)",
@@ -69,15 +52,6 @@ const styles = stylex.create({
   },
   rowMeta: {
     minWidth: 0,
-  },
-  shortcodeToken: {
-    backgroundColor: "var(--color-background-muted)",
-    borderColor: "var(--color-border)",
-    borderRadius: "var(--radius-inner)",
-    borderStyle: "solid",
-    borderWidth: "var(--border-width)",
-    paddingBlock: "var(--spacing-0-5)",
-    paddingInline: "var(--spacing-1)",
   },
 });
 
@@ -235,15 +209,9 @@ export function ShellCommandPalette({
                   key={group.label}
                   density="compact"
                   header={
-                    <HStack justify="between" align="center" gap={3}>
-                      <Text type="supporting" weight="medium">
-                        {group.label}
-                      </Text>
-                      <Badge
-                        label={String(group.items.length)}
-                        variant="neutral"
-                      />
-                    </HStack>
+                    <Text type="supporting" weight="medium">
+                      {group.label}
+                    </Text>
                   }
                 >
                   {group.items.map((item) => (
@@ -289,56 +257,26 @@ function CommandListItem({
 }) {
   const childCount =
     item.command.childCount ?? item.command.children?.length ?? 0;
+  const endContent =
+    item.shortcut || childCount > 0 ? (
+      <HStack gap={2} align="center">
+        {item.shortcut ? <Kbd keys={shortcutToKbd(item.shortcut)} /> : null}
+        {childCount > 0 ? (
+          <Icon icon="chevronRight" color="secondary" />
+        ) : null}
+      </HStack>
+    ) : undefined;
 
   return (
     <ListItem
       label={item.label}
       description={
-        <VStack gap={0} xstyle={styles.rowMeta}>
-          <Text type="supporting" maxLines={1}>
-            {item.description}
-          </Text>
-          <Text type="code" color="secondary" maxLines={1}>
-            {item.command.id}
-          </Text>
-          {item.shortcodes.length > 0 ? (
-            <HStack gap={1} align="center" wrap="wrap">
-              {item.shortcodes.map((shortcode) => (
-                <Text
-                  key={shortcode}
-                  type="code"
-                  color="secondary"
-                  xstyle={styles.shortcodeToken}
-                >
-                  {shortcode}
-                </Text>
-              ))}
-            </HStack>
-          ) : null}
-        </VStack>
+        <Text type="supporting" maxLines={1} xstyle={styles.rowMeta}>
+          {item.description}
+        </Text>
       }
       isSelected={isSelected}
-      startContent={
-        <HStack gap={0} xstyle={styles.glyph}>
-          <Icon icon={item.icon} color={item.iconColor} size="sm" />
-        </HStack>
-      }
-      endContent={
-        <HStack gap={2} align="center">
-          {item.shortcut ? <Kbd keys={shortcutToKbd(item.shortcut)} /> : null}
-          {childCount > 0 ? (
-            <Badge label={`${childCount} actions`} variant="blue" />
-          ) : (
-            <Badge
-              label={item.ringLabel}
-              variant={ringVariant(item.command.ring)}
-            />
-          )}
-          {childCount > 0 ? (
-            <Icon icon="chevronRight" color="secondary" />
-          ) : null}
-        </HStack>
-      }
+      endContent={endContent}
       onClick={onSelect}
     />
   );
@@ -380,11 +318,7 @@ function createBackItem(parent: CommandContribution): ShellCommandItem {
     command,
     description: parent.title,
     group: `${parent.title} actions`,
-    icon: "chevronLeft",
-    iconColor: "secondary",
     isBackItem: true,
-    ringLabel: "Back",
-    shortcodes: [],
   };
 }
 
@@ -399,11 +333,7 @@ function commandToItem(
     command,
     description: command.description ?? command.id,
     group: groupLabelForResult(result, drillParent),
-    icon: toIconName(command.icon),
-    iconColor: iconColorForResult(result),
     result,
-    ringLabel: ringLabel(result.source.ring),
-    shortcodes: command.shortcodes ?? [],
     shortcut: command.shortcut,
   };
 }
@@ -488,18 +418,6 @@ function groupLabelForResult(
   return `${result.source.label} - ${ringLabel(result.source.ring)}`;
 }
 
-function iconColorForResult(result: RankedCommandResult): IconColor {
-  if (result.source.ring === "feature") {
-    return "accent";
-  }
-
-  if (result.source.ring === "product") {
-    return "success";
-  }
-
-  return "secondary";
-}
-
 function ringLabel(ring?: string) {
   if (ring === "feature") {
     return "Feature";
@@ -516,22 +434,6 @@ function ringLabel(ring?: string) {
   return "Platform";
 }
 
-function ringVariant(ring?: string) {
-  if (ring === "feature") {
-    return "purple";
-  }
-
-  if (ring === "app") {
-    return "blue";
-  }
-
-  if (ring === "product") {
-    return "teal";
-  }
-
-  return "neutral";
-}
-
 function shortcutToKbd(shortcut: CommandShortcut) {
   return [
     ...(shortcut.modifiers ?? []).map((modifier) =>
@@ -539,39 +441,4 @@ function shortcutToKbd(shortcut: CommandShortcut) {
     ),
     shortcut.key,
   ].join("+");
-}
-
-function toIconName(icon?: string): IconName {
-  const allowedIcons: IconName[] = [
-    "arrowDown",
-    "arrowUp",
-    "arrowsUpDown",
-    "calendar",
-    "check",
-    "checkDouble",
-    "chevronDown",
-    "chevronLeft",
-    "chevronRight",
-    "clock",
-    "close",
-    "copy",
-    "error",
-    "externalLink",
-    "eyeSlash",
-    "funnel",
-    "info",
-    "menu",
-    "microphone",
-    "moreHorizontal",
-    "search",
-    "stop",
-    "success",
-    "viewColumns",
-    "warning",
-    "wrench",
-  ];
-
-  return allowedIcons.includes(icon as IconName)
-    ? (icon as IconName)
-    : "wrench";
 }

@@ -8,10 +8,10 @@ import {
   SideNavSection,
 } from "@astryxdesign/core/SideNav";
 import { TopNav, TopNavHeading, TopNavItem } from "@astryxdesign/core/TopNav";
-import { useMemo, useState, type ReactNode } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import type { ShellHost, WorkspaceContext } from "../core/host";
 import { ShellCommandPalette } from "./command-palette";
-import { useHostVersion } from "./react-bindings";
+import { useHostVersion, useShellTopNavMounts } from "./react-bindings";
 
 export type ShellNavItem = {
   href: string;
@@ -56,16 +56,23 @@ export function ShellFrame({
     () => host.getManifestForPathname(currentPathname),
     [currentPathname, host, version]
   );
+  const topNavHeaderMounts = useShellTopNavMounts(host, "header");
+  const topNavStartMounts = useShellTopNavMounts(host, "start");
+  const topNavCenterMounts = useShellTopNavMounts(host, "center");
+  const topNavEndMounts = useShellTopNavMounts(host, "end");
+  const contributedHeading = topNavHeaderMounts[0]?.content;
   const topNav = (
     <TopNav
       label="Application navigation"
       heading={
-        <TopNavHeading
-          logo={logo ?? <Icon icon="viewColumns" color="accent" />}
-          heading={brandName}
-          headingHref={brandHref}
-          subheading={workspace.name}
-        />
+        contributedHeading ?? (
+          <TopNavHeading
+            logo={logo ?? <Icon icon="viewColumns" color="accent" />}
+            heading={brandName}
+            headingHref={brandHref}
+            subheading={workspace.name}
+          />
+        )
       }
       startContent={
         <HStack gap={1} align="center" wrap="wrap">
@@ -78,7 +85,19 @@ export function ShellFrame({
               isSelected={item.isSelected ?? item.href === currentPathname}
             />
           ))}
+          {topNavStartMounts.map((mount) => (
+            <Fragment key={mount.id}>{mount.content}</Fragment>
+          ))}
         </HStack>
+      }
+      centerContent={
+        topNavCenterMounts.length > 0 ? (
+          <HStack gap={2} align="center" wrap="wrap">
+            {topNavCenterMounts.map((mount) => (
+              <Fragment key={mount.id}>{mount.content}</Fragment>
+            ))}
+          </HStack>
+        ) : undefined
       }
       endContent={
         <HStack gap={2} align="center" wrap="wrap">
@@ -89,6 +108,9 @@ export function ShellFrame({
             icon={<Icon icon="search" />}
             onClick={() => setCommandPaletteOpen(true)}
           />
+          {topNavEndMounts.map((mount) => (
+            <Fragment key={mount.id}>{mount.content}</Fragment>
+          ))}
           {endContent}
         </HStack>
       }

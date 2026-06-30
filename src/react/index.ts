@@ -9,5 +9,8 @@ export {
   useHostVersion,
   usePreferenceInspection,
   useSettingsGroups,
+  useShellTopNavHeader,
+  useShellTopNavMount,
+  useShellTopNavMounts,
   useVisibleCommands,
 } from "./react-bindings";
