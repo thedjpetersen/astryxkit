@@ -1,3 +1,9 @@
+// The palette is a Dialog over `host.paletteResults()` — all ranking,
+// prefix parsing, and recents live in the shell SDK, so this component
+// only owns interaction state: the query, the keyboard selection, and
+// `drillParent` for descending into a command's children. Enter runs or
+// drills, ArrowRight drills, Backspace on an empty query backs out.
+
 import { CommandPaletteFooter } from "@astryxdesign/core/CommandPalette";
 import { Dialog } from "@astryxdesign/core/Dialog";
 import { HStack } from "@astryxdesign/core/HStack";
@@ -282,6 +288,10 @@ function CommandListItem({
   );
 }
 
+// Two modes, one item shape. Drilled in, the list is a synthetic back row
+// plus the parent's ranked children; at the top level it is the ranked
+// palette results. Everything downstream (grouping, rendering, keyboard
+// movement) is mode-blind.
 function buildCommandItems(
   host: ShellHost,
   query: string,

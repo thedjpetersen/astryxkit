@@ -1,3 +1,8 @@
+// The Worker helpers stay small on principle: a router that is a `for`
+// loop, JSON helpers that set the right headers, and body readers that
+// never throw on garbage input. Bindings, schemas, auth, and deployment
+// topology are host-product decisions — nothing here hides them.
+
 export type JsonPrimitive = string | number | boolean | null;
 
 export type JsonValue =
@@ -15,6 +20,9 @@ export type WorkerRequestContext<Env = unknown> = {
   url: URL;
 };
 
+// A route is a pathname (exact string or regex), an optional method
+// filter, and a handler. Regex named groups become `params` — that is the
+// entire parameter system, and it is enough for API surfaces this size.
 export type WorkerRoute<Env = unknown> = {
   handle: (context: WorkerRequestContext<Env>) => Response | Promise<Response>;
   method?: string | string[];
@@ -58,6 +66,10 @@ export function jsonError(
   );
 }
 
+// Defensive by contract: malformed JSON, a non-object body, or no body at
+// all each collapse to `{}` rather than a thrown error. Handlers then use
+// `getText`/`getNullableText` to pull fields, so validation failures are
+// expressed as 400 responses instead of Worker exceptions.
 export async function readJsonObject(request: Request): Promise<JsonObject> {
   const body = await request.json().catch(() => ({}));
 
@@ -107,6 +119,11 @@ export function createHealthResponse(name: string): Response {
   });
 }
 
+// The router's dispatch order is the whole story: health check first,
+// then routes in declaration order (first match wins), then the static
+// asset fetcher if the env provides one, then 404. No middleware chain,
+// no route trees — a product that outgrows this should write its own
+// dispatch, not configure this one harder.
 export function createWorkerRouter<Env>({
   assets,
   health,

@@ -1,3 +1,7 @@
+// Three tiny helpers, one purpose: fail loudly at the boundary. A missing
+// or misconfigured D1 binding should be a clear startup error naming the
+// binding, not an `undefined is not an object` five calls deep.
+
 export function requireD1Database<Env extends Record<string, unknown>>(
   env: Env,
   binding: keyof Env & string
@@ -11,6 +15,10 @@ export function requireD1Database<Env extends Record<string, unknown>>(
   return database;
 }
 
+// `batch` gives multi-statement writes a single transactional round trip;
+// the empty-array guard exists because D1 rejects empty batches and "no
+// statements" is a legitimate state for callers that build them up
+// conditionally.
 export async function runD1Batch(
   database: D1Database,
   statements: D1PreparedStatement[]

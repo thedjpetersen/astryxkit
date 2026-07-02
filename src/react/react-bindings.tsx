@@ -1,3 +1,9 @@
+// The React layer never duplicates shell state — that is the one rule this
+// file exists to enforce. Every hook here is a thin `useSyncExternalStore`
+// over a service's version counter: when the shell changes, the counter
+// bumps, React re-reads, done. No context providers, no reducers, no copy
+// of the command list living in component state.
+
 import { Badge } from "@astryxdesign/core/Badge";
 import { Card } from "@astryxdesign/core/Card";
 import { Heading } from "@astryxdesign/core/Heading";
@@ -30,6 +36,10 @@ export function useVisibleCommands(host: ShellHost): CommandContribution[] {
   return useMemo(() => host.paletteItems(), [host, version]);
 }
 
+// Registers a dynamic command source for exactly the lifetime of the
+// calling component. Callers memoize `source`; a new object identity means
+// re-register, which is precisely the semantics data-driven sources want
+// (the registry swaps batches by id).
 export function useCommandSource(
   source: CommandSourceContribution,
   sdk: ShellSDK = shell()
@@ -88,6 +98,11 @@ export function useShellTopNavMounts(
   return useMemo(() => host.topNavMounts(area), [area, host, version]);
 }
 
+// Mount hooks split into two effects on purpose: the first registers and
+// disposes on identity changes (id, area, host), while the second only
+// pushes fresh `content` into the existing registration. React elements
+// get a new identity every render, so folding content into the first
+// effect would remount the contribution on every keystroke.
 export function useShellTopNavMount({
   appId,
   area,
@@ -193,6 +208,9 @@ export function useShellTopNavHeader({
   });
 }
 
+// The primitive all the read hooks build on: subscribe to the host, read
+// its version. `useMemo` on `[host, version]` then makes any derived list
+// recompute exactly when the shell says something changed.
 export function useHostVersion(host: ShellHost) {
   return useSyncExternalStore(
     (listener) => host.subscribe(listener).dispose,
@@ -231,6 +249,12 @@ export function useContextKey<TValue>(
   );
 }
 
+// The outlet is where routes become running apps: mount activates, unmount
+// deactivates, and the two placeholder cards cover the in-between states
+// (unregistered manifest, module still loading). The `isCancelled` flag
+// handles the awkward race where activation rejects after the user has
+// already navigated away — deactivating by id keeps it from tearing down
+// whichever app took the surface next.
 export function ShellAppOutlet({
   appId,
   host,

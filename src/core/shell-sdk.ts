@@ -1,9 +1,28 @@
+// The shell SDK is the seam between a host product and its micro-apps: one
+// shared object holding four services — commands, context keys, events, and
+// preferences. Everything in this file is framework-agnostic TypeScript.
+// The React package subscribes to these services, and `ShellHost` composes
+// them into an app registration and activation lifecycle.
+//
+// Two conventions run through the whole file. First, every mutation returns
+// a `Disposable`, so any contribution can be unwound in reverse order —
+// that is what makes app activation safely reversible. Second, every
+// service keeps a monotonic version counter, so React can bind with
+// `useSyncExternalStore` and never diff service state by hand.
+
+// The unit of undo. Declaring a command, binding a handler, subscribing to
+// an event — each hands back one of these, and disposing it removes exactly
+// that contribution and nothing else.
 export type Disposable = {
   dispose: () => void;
 };
 
 export type PreferenceValue = string | number | boolean;
 
+// Rings are the ownership ladder that both commands and preferences climb:
+// `platform` is the outermost (the whole install), then `product`, then a
+// single `app`, then one `feature` inside an app. More specific rings win
+// ties — a feature knows its context better than the platform does.
 export type PreferenceRing = "platform" | "product" | "app" | "feature";
 
 export type CommandRing = PreferenceRing;
@@ -49,6 +68,13 @@ export type CommandEntity = {
   description?: string;
 };
 
+// A command is declared as data long before any code is loaded: the palette
+// can list, rank, and route to it while the owning app module is still a
+// lazy import. `handler` is optional for exactly that reason — declaration
+// and binding are separate steps (see `CommandRegistry.declare` and
+// `bind`). `shortcodes` carry stable human-facing IDs like `T00000A`;
+// `when` is a context expression that gates visibility; `children` turn a
+// command into a drillable submenu in the palette.
 export type CommandContribution = {
   id: string;
   appId: string;
@@ -79,6 +105,9 @@ export type CommandContribution = {
   when?: string;
 };
 
+// A dynamic batch of commands owned by one contributor. Sources replace by
+// id, so an app can re-register its source on every data change and the
+// registry swaps the old batch out atomically.
 export type CommandSourceContribution = {
   id: string;
   appId: string;
@@ -223,6 +252,11 @@ type CommandActivator = (command: CommandContribution) => Promise<void> | void;
 const defaultPlatformId = "astryxkit";
 const defaultShellInstanceId = "astryxkit-shell-sdk";
 
+// Collects disposables so a whole scope — an activated app, a registered
+// source — can be torn down with one call. The subtle invariant: adding to
+// an already-disposed store disposes the newcomer immediately, which closes
+// the race where an async activation finishes after its app was switched
+// away from.
 export class DisposableStore implements Disposable {
   private disposables = new Set<Disposable>();
   private isDisposed = false;
@@ -252,6 +286,12 @@ export class DisposableStore implements Disposable {
   }
 }
 
+// A flat key/value store that answers one question: "should this command or
+// preference be visible right now?" Contributions carry `when` expressions
+// — `appActive == 'tasks' && !tasks.readonly` — and this service evaluates
+// them against live state. The grammar is deliberately tiny: `&&` clauses,
+// `!` negation, `==`/`!=` against a literal, or a bare key for truthiness.
+// Anything a product needs beyond that belongs in product code, not here.
 export class ContextKeyService {
   private values = new Map<string, ContextValue>();
   private listeners = new Set<ContextChangeListener>();
@@ -343,6 +383,13 @@ export class ContextKeyService {
   }
 }
 
+// The command system's core move is the declare/bind split. `declare` puts
+// a command's metadata in the palette immediately; `bind` attaches the
+// handler later, usually during app activation. When an unbound command is
+// executed, the registry asks its `activator` (installed by `ShellHost`) to
+// load and activate the owning app first, then retries the handler lookup.
+// The palette therefore shows a product's full capability surface without
+// eagerly importing a single app module.
 export class CommandRegistry {
   private activator?: CommandActivator;
   private commands = new Map<string, CommandContribution>();
@@ -381,6 +428,10 @@ export class CommandRegistry {
     };
   }
 
+  // Dynamic sources re-register wholesale: a new registration with the same
+  // id disposes the previous batch first. Children inherit the parent's
+  // ring, source, and category, and default to `paletteHidden` — they are
+  // reached by drilling into the parent, not by top-level search.
   registerSource(source: CommandSourceContribution): Disposable {
     this.sourceDisposables.get(source.id)?.dispose();
 
@@ -464,6 +515,10 @@ export class CommandRegistry {
     return this.commands.get(commandId);
   }
 
+  // Shortcode lookup backs short links and `#T00000A`-style queries. It is
+  // exact-match only, case-insensitive, and tolerant of a leading `#`; when
+  // several commands claim one code, the normal priority-then-ring ordering
+  // picks the winner deterministically.
   findByShortcode(shortcode: string): CommandContribution | undefined {
     const normalizedShortcode = normalizeShortcodeForMatch(shortcode);
 
@@ -492,6 +547,10 @@ export class CommandRegistry {
       .sort(compareCommands);
   }
 
+  // The palette's main entry point. An empty query is the "just opened"
+  // state, so recent history floats to the top with a ring-score bonus;
+  // once the user types anything (or picks a prefix mode), recents step
+  // aside and pure relevance takes over.
   rankedPaletteItems(
     query: string,
     context: ContextKeyService,
@@ -559,6 +618,10 @@ export class CommandRegistry {
     return builtInCommandPrefixes;
   }
 
+  // Execution is where lazy activation pays off: no handler yet means the
+  // owning app has never run, so the activator loads it and the handler is
+  // looked up once more. Pure navigation commands (`route`/`href`, no
+  // handler) are legal — the host performs the navigation side.
   async execute(commandId: string): Promise<void> {
     const command = this.commands.get(commandId);
 
@@ -649,6 +712,9 @@ export class CommandRegistry {
       .sort(compareRankedCommands);
   }
 
+  // History is tiny on purpose — five entries, newest first, one per
+  // command id. It exists to make the empty palette useful, not to be an
+  // audit log.
   private recordHistory(command: CommandContribution) {
     this.history = [
       {
@@ -666,6 +732,10 @@ export class CommandRegistry {
   }
 }
 
+// An immutable read view over both value layers. Within any single ring,
+// a user's explicit choice always beats a contributed seed value — that
+// single line in `get` is the whole "your settings survive product
+// defaults" guarantee.
 export class PreferenceSnapshot {
   private seedValues: ReadonlyMap<string, PreferenceValueRecord>;
   private userValues: ReadonlyMap<string, PreferenceValueRecord>;
@@ -691,6 +761,11 @@ export class PreferenceSnapshot {
   }
 }
 
+// Resolution is a walk from the most specific ring outward: feature, then
+// app, then product, then platform, falling back to the schema default.
+// The first ring with a stored value wins. Exported as a pure function so
+// tests and server code can resolve against any snapshot without standing
+// up a store.
 export function resolvePreference(
   snapshot: PreferenceSnapshot,
   schema: PreferenceSchema,
@@ -752,6 +827,12 @@ export function resolvePreference(
   };
 }
 
+// The writable side of preferences. Schemas declare what exists (typed,
+// namespaced `app.key` ids, enum options, migrations); values live in two
+// layers — `seed` values contributed by manifests and products, and `user`
+// values set from settings UI. Keeping the layers separate is what lets
+// "Reset" mean "remove my override" instead of "hope the old default was
+// saved somewhere".
 export class PreferencesStore {
   private listeners = new Set<Listener>();
   private schemas = new Map<string, PreferenceSchema>();
@@ -787,6 +868,10 @@ export class PreferencesStore {
     };
   }
 
+  // Seed contributions are reversible like everything else: disposing one
+  // restores whatever seed value it displaced, so app registration and
+  // disposal round-trip cleanly even when two contributors touched the
+  // same key.
   contributeValue(
     key: string,
     value: PreferenceValue,
@@ -872,6 +957,10 @@ export class PreferencesStore {
     );
   }
 
+  // Inspection powers settings UI: beyond the resolved value it reports
+  // which ring supplied it, whether it is inherited from a wider ring,
+  // whether a user override exists, and the per-ring values — enough to
+  // render VS Code-style "modified elsewhere" affordances.
   inspectWithContext(key: string, context: RingContext): PreferenceInspection {
     const schema = this.schemas.get(key);
 
@@ -1080,6 +1169,10 @@ export class PreferencesStore {
   }
 }
 
+// Deliberately minimal pub/sub: typed payloads, timestamps, no wildcard
+// subscriptions, no replay. Apps that need durable messaging should use
+// product infrastructure; this bus is for "the shell should react to what
+// just happened" moments like toasts and activity feeds.
 export class EventBus {
   private listeners = new Map<string, Set<(event: ShellEvent) => void>>();
 
@@ -1123,10 +1216,19 @@ export class EventBus {
   }
 }
 
+// Micro-app architectures ship modules independently, which means two
+// copies of this file can end up loaded at once — one bundled with the
+// host, one with an app. If each copy had its own SDK, commands would
+// register into a registry nobody reads. Stashing the singleton on
+// `globalThis` makes every copy resolve to the same instance; the import
+// map's `@astryxkit/sdk` pin exists for the same reason.
 type ShellGlobal = typeof globalThis & {
   __astryxkitShellSdk?: ShellSDK;
 };
 
+// `CommandRegistry` needs a back-reference to the SDK that owns it (for
+// handler execution contexts), so construction threads a lazy `getShell`
+// through instead of a value that does not exist yet.
 export function createShellSDK(options: ShellSDKOptions = {}): ShellSDK {
   const platformId = options.platformId ?? defaultPlatformId;
   let sdk = undefined as ShellSDK | undefined;
@@ -1150,6 +1252,9 @@ export function createShellSDK(options: ShellSDKOptions = {}): ShellSDK {
   return sdk;
 }
 
+// `shell()` is get-or-create and safe to call from anywhere; `configureShell`
+// force-replaces the singleton and belongs only at host startup;
+// `resetShellForTests` is the same operation under an honest name.
 export function shell(options: ShellSDKOptions = {}): ShellSDK {
   const globalScope = globalThis as ShellGlobal;
 
@@ -1176,12 +1281,19 @@ export function assertSingleShellInstance(candidate: ShellSDK = shell()) {
   }
 }
 
+// Command ids and preference keys must start with their owning `appId.` —
+// enforced at declaration time so collisions surface as loud errors during
+// development, not as two apps silently fighting over one key.
 function assertNamespaced(value: string, appId: string, label: string) {
   if (!value.startsWith(`${appId}.`)) {
     throw new Error(`${label} must be namespaced with ${appId}.`);
   }
 }
 
+// Palette prefix modes reserve one mental model per sigil, following the
+// editor-palette tradition: `>` runs actions, `/` goes to pages, `@` finds
+// entities, `?` searches help. Typing a sigil narrows the candidate set
+// before any text matching happens.
 const builtInCommandPrefixes: CommandPrefixMode[] = [
   {
     filter: (command) => commandKind(command) === "action",
@@ -1213,6 +1325,10 @@ const builtInCommandPrefixes: CommandPrefixMode[] = [
   },
 ];
 
+// Normalization fills every inferable field at declaration time — ring
+// from `featureId` or the reserved `platform`/`product` app ids, kind from
+// the shape (`entity` beats `route`/`href` beats plain action), deduped
+// shortcodes — so ranking and rendering never re-derive them per keystroke.
 function normalizeCommand(command: CommandContribution): CommandContribution {
   const ring =
     command.ring ??
@@ -1314,6 +1430,8 @@ function commandSourceForCommand(command: CommandContribution) {
   };
 }
 
+// Specificity order for ranking: feature > app > product > platform. The
+// closer a command sits to what the user is doing, the earlier it sorts.
 function ringScore(ring: CommandRing): number {
   if (ring === "feature") {
     return 4;
@@ -1330,6 +1448,12 @@ function ringScore(ring: CommandRing): number {
   return 1;
 }
 
+// Text relevance is a ladder of match qualities, each tier scoring above
+// the whole tier below it: exact shortcode (1500), shortcode prefix
+// (~1200), substring of the title (1000 minus position), word-start (750),
+// spread subsequence (~450, contiguity-weighted), and finally a substring
+// anywhere in ids, keywords, or descriptions (300). Match ranges come back
+// with the score so the palette can underline exactly what matched.
 function fuzzyCommandMatch(
   command: CommandContribution,
   query: string,
@@ -1433,6 +1557,10 @@ function scoreShortcodeMatch(
   return 0;
 }
 
+// Classic fuzzy scoring: every query character must appear in order, and
+// the score rewards long contiguous runs while penalizing how far the
+// match spreads across the title — "tsk" should light up "Tasks", not a
+// scattering across three words.
 function scoreSubsequence(
   value: string,
   query: string,
@@ -1547,6 +1675,9 @@ function preferenceRecordId(
   return `${ring}:${scope}:${key}`;
 }
 
+// Schemas can rename stored values over time (`"cozy" -> "comfortable"`)
+// via a `migrations` map; stored values pass through it on every read, so
+// old persisted data keeps working without a write-time migration pass.
 function migratePreferenceValue(
   value: PreferenceValue,
   schema: PreferenceSchema,

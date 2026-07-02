@@ -1,3 +1,10 @@
+// A settings surface generated entirely from declared schemas: groups come
+// from `host.settingsGroups()`, controls are chosen by schema type
+// (boolean -> switch, enum -> selector, otherwise a text input), and each
+// row leans on `usePreferenceInspection` to show where its value really
+// comes from. Nothing here is configured per-product — declare a schema
+// and the panel renders it.
+
 import { Badge } from "@astryxdesign/core/Badge";
 import { Button } from "@astryxdesign/core/Button";
 import { Divider } from "@astryxdesign/core/Divider";

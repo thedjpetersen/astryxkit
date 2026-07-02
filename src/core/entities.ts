@@ -1,5 +1,16 @@
+// Cross-app features — `@`-mentions, reference explorers, "everything the
+// workspace can point at" pickers — need one index over every app's
+// records. The obvious implementation is an aggregator that calls each
+// app's API directly, and it is exactly wrong: it recreates the coupling
+// the shell exists to remove. So the dependency points the other way.
+// Apps declare entity sources on their manifests, and this module owns
+// the neutral model plus the aggregation that never learns any app's API.
+
 import type { WorkspaceContext } from "./host";
 
+// Kinds are declared by sources, not enumerated by the framework — a
+// person, a task, a wiki page, and whatever the next app invents are all
+// just kind ids with display labels and an optional accent color.
 export type WorkspaceEntityKind = {
   id: string;
   label: string;
@@ -7,6 +18,10 @@ export type WorkspaceEntityKind = {
   accent?: string;
 };
 
+// A reference, not a record: just enough to render a mention chip, rank a
+// popup row, and navigate on click. The `route` doubles as identity, which
+// keeps mentions self-sufficient — a chip stores the route, so clicking it
+// needs no lookup at all.
 export type WorkspaceEntityRef = {
   kind: string;
   route: string;

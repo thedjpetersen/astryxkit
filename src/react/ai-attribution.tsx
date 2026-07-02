@@ -1,3 +1,9 @@
+// The visible half of content provenance (`normalizeAiAttribution` in core
+// is the data half). The badge is Obsidian-flavored: a small sparkles
+// glyph and one quiet line of secondary text, present wherever AI-produced
+// text is shown and absent (rendering null) for human-written content.
+// Frameworks display provenance; products decide when it is mandatory.
+
 import { Text } from "@astryxdesign/core/Text";
 import * as stylex from "@stylexjs/stylex";
 import type { StyleXStyles } from "@stylexjs/stylex";

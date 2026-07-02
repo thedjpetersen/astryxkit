@@ -1,3 +1,9 @@
+// Short links are a platform-wide affordance, so their three parts live
+// together: code generation for artifacts (`D7KQ2M9X`), readable codes for
+// humans to say out loud (`kfq4-x2mh`), and the route that turns
+// `/d/<code>` back into an app route. The React package's `ShareCodeChip`
+// is the display half of the same contract.
+
 import {
   jsonError,
   type WorkerRequestContext,

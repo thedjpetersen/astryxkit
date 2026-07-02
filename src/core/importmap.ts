@@ -1,3 +1,10 @@
+// Micro-apps ship as independent ES modules, and import maps are how the
+// browser is told two things at once: where each app's entry lives
+// (`@app/<id>`), and — more importantly — that every module must share one
+// copy of React and one copy of the shell SDK. Without the shared pins, an
+// app would bundle its own SDK, register commands into it, and the host
+// would never see them.
+
 import type { ShellAppManifest, ShellHost } from "./host";
 
 export type ShellImportMap = {
@@ -6,6 +13,9 @@ export type ShellImportMap = {
 
 export const shellImportMapId = "astryxkit-importmap";
 
+// Dev-server paths, deliberately: production hosts substitute their own
+// pins (CDN URLs, hashed bundles) via `buildShellImportMap`'s second
+// argument. These defaults make the local-dev story work out of the box.
 export const sharedImportPins: Record<string, string> = {
   "@astryxdesign/core/": "/node_modules/@astryxdesign/core/",
   "@astryxkit/sdk": "/node_modules/astryxkit/dist/core/shell-sdk.js",
@@ -38,6 +48,9 @@ export function buildImportMapFromHost(host: ShellHost): ShellImportMap {
   return buildShellImportMap(host.getManifests());
 }
 
+// Import maps must exist before any module resolution uses them, and a
+// document only honors one — so installation is idempotent: if the script
+// tag is already present, it wins and this call is a no-op.
 export function installShellImportMap(
   importMap: ShellImportMap
 ): HTMLScriptElement | undefined {

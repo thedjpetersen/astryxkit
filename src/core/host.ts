@@ -1,3 +1,10 @@
+// If the shell SDK is the nervous system, `ShellHost` is the spine: it
+// holds the manifest catalog, decides which single app is active, and
+// guarantees that everything an app contributed while active — commands,
+// handlers, nav mounts, subscriptions — is disposed the moment it stops
+// being active. One app at a time is a deliberate constraint; it keeps
+// "who owns the current surface" answerable at every moment.
+
 import type { ReactNode } from "react";
 import {
   buildWorkspaceEntityIndex,
@@ -44,6 +51,11 @@ export type ShellPreferenceDefault = {
   value: PreferenceValue;
 };
 
+// The manifest is the contract an app signs before any of its code loads:
+// identity and routing (`id`, `route`, `entryUrl`), declared-up-front
+// contributions (`commands`, `preferences`, `entitySources`, `features`),
+// and one lazy `load()` that resolves the real module on first activation.
+// Everything the shell renders pre-activation comes from this object.
 export type ShellAppManifest = {
   id: string;
   name: string;
@@ -60,6 +72,10 @@ export type ShellAppManifest = {
   preferences?: PreferenceSchema[];
 };
 
+// Nav mounts let the active app project UI into chrome the host owns —
+// a presence indicator in the top nav, a filter tree in the side nav —
+// without owning the frame. Mounts registered with an `appId` are removed
+// automatically on deactivation, so chrome can never leak across apps.
 export type ShellTopNavMountArea = "header" | "start" | "center" | "end";
 
 export type ShellTopNavMountContribution = {
@@ -184,6 +200,11 @@ export class ShellHost implements Disposable {
     }
   }
 
+  // Registration is declaration, not activation: commands, preference
+  // schemas, seed defaults, and entity sources all land immediately so the
+  // palette, settings, and mention surfaces are complete — while `load()`
+  // stays untouched. The returned disposable unwinds every one of those
+  // contributions and deactivates the app if it happens to be running.
   register(manifest: ShellAppManifest): Disposable {
     if (this.manifests.has(manifest.id)) {
       throw new Error(`Micro-app already registered: ${manifest.id}`);
@@ -333,6 +354,10 @@ export class ShellHost implements Disposable {
     return Array.from(this.sideNavMountsById.values()).sort(compareNavMounts);
   }
 
+  // Entity sources usually arrive via manifests, but platform-level sources
+  // (people derived across apps, say) can register directly. Either way the
+  // host only aggregates — it never knows any app's API shape, which is the
+  // entire point of the contribution model.
   registerEntitySource(source: WorkspaceEntitySource): Disposable {
     if (this.entitySourcesById.has(source.id)) {
       throw new Error(`Entity source already registered: ${source.id}`);
@@ -416,6 +441,11 @@ export class ShellHost implements Disposable {
     return this.version;
   }
 
+  // Activation: deactivate whoever holds the surface, flip the `appActive`
+  // context key (so `when` clauses re-evaluate before the module even
+  // resolves), then `load()` and run the module's `activate()`. Everything
+  // the app binds through `disposeWithApp` lands in one store that
+  // deactivation drains — apps clean up by construction, not by discipline.
   async activate(appId: string): Promise<ShellAppInstance> {
     if (this.active?.manifest.id === appId) {
       return this.active.instance;
@@ -446,6 +476,9 @@ export class ShellHost implements Disposable {
     return instance;
   }
 
+  // Deactivation is the mirror image, and passing an `appId` makes it
+  // conditional — "tear down tasks if it is still active" — which lets
+  // racing activations resolve safely no matter which one finishes last.
   deactivate(appId?: string) {
     const current = this.active;
 
@@ -481,6 +514,10 @@ export class ShellHost implements Disposable {
     this.shellSdk.context.set(feature.contextKey, isEnabled);
   }
 
+  // The host-level command runner adds what the registry alone cannot do:
+  // navigation. Route commands navigate in-shell, `href` commands respect
+  // `target="_blank"`, and then execution falls through to the registry's
+  // activate-then-run flow.
   async runCommand(commandId: string): Promise<void> {
     const command = this.shellSdk.commands.get(commandId);
 
@@ -556,6 +593,10 @@ function compareNavMounts(
   return left.id.localeCompare(right.id);
 }
 
+// The only commands the framework itself contributes: open preferences
+// (and docs, when the host names a route). Hosts opt out with
+// `includeDefaultPlatformCommands: false`; everything else in the palette
+// belongs to the product and its apps.
 export function createPlatformCommandSource({
   docsRoute,
   preferencesRoute = "/preferences",
@@ -605,6 +646,10 @@ export function createPlatformCommandSource({
   };
 }
 
+// The default navigator is a minimal SPA pushState: same-origin URLs update
+// history and announce themselves via an `astryxkit:navigate` event for the
+// host router to observe; cross-origin URLs get a full document load. Hosts
+// with real routers replace this wholesale via `ShellHostOptions.navigate`.
 function defaultNavigate(href: string) {
   if (typeof window === "undefined") {
     return;

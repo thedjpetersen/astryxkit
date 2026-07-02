@@ -1,3 +1,10 @@
+// AstryxKit composes the Astryx design system rather than replacing it,
+// and this file is the entire composition: a default theme, a provider
+// that persists the user's light/dark/system choice, and the storage
+// helpers underneath it. The provider works uncontrolled out of the box
+// and turns controlled the moment a host passes `appearance` — the same
+// dual-mode convention Astryx inputs follow.
+
 import { Theme, defineTheme, type DefinedTheme } from "@astryxdesign/core/theme";
 import { useEffect, useState, type ReactNode } from "react";
 

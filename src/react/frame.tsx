@@ -1,3 +1,9 @@
+// `ShellFrame` is the whole chrome in one component: Astryx `AppShell`
+// with a top nav, an app-catalog side nav, and the command palette wired
+// to a trigger button. Apps project into it through nav mounts rather
+// than composing it — the frame stays host-owned, and the "Commands"
+// button is the only UI the framework insists on.
+
 import { AppShell } from "@astryxdesign/core/AppShell";
 import { Button } from "@astryxdesign/core/Button";
 import { HStack } from "@astryxdesign/core/HStack";
@@ -151,6 +157,9 @@ export function ShellFrame({
   );
 }
 
+// Manifest icons are plain strings from data, not typed imports, so they
+// are validated against the Astryx registry at render time — an unknown
+// name degrades to the wrench instead of crashing the frame.
 function toIconName(icon?: string): IconName {
   const allowedIcons: IconName[] = [
     "arrowDown",

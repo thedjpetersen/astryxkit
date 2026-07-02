@@ -1,3 +1,9 @@
+// The display half of the short-link contract (`astryxkit/worker` owns
+// generation and redirects). Design intent: codes are load-bearing
+// identifiers, so the chip is quiet — monospace text, hairline border —
+// and the tooltip carries the explanation. Clicking copies the absolute
+// URL; the border flipping to the success color is the only celebration.
+
 import { Icon } from "@astryxdesign/core/Icon";
 import { Tooltip } from "@astryxdesign/core/Tooltip";
 import * as stylex from "@stylexjs/stylex";

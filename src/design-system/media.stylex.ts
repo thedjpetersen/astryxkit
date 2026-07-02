@@ -1,26 +1,19 @@
+// Every app eventually re-declares the same handful of media queries —
+// `const REDUCE = "@media (prefers-reduced-motion: reduce)"` copied into
+// file after file. These are the shared copies, published as StyleX
+// `defineConsts` so they can be used as condition keys in any
+// `stylex.create` call: `[mediaQueries.reducedMotion]: "0ms"`.
+//
+// Two conventions worth adopting with them: hover styles belong behind
+// `canHover` (touch devices otherwise get sticky hover states), and
+// decorative `transform`/`opacity` transitions should collapse to `0ms`
+// under `reducedMotion`.
+//
+// One build requirement: cross-package StyleX constants resolve only when
+// the consuming app's Babel config sets `unstable_moduleResolution`.
+
 import * as stylex from "@stylexjs/stylex";
 
-/**
- * Shared capability and breakpoint queries for StyleX conditions, so apps
- * stop re-declaring `const REDUCE = "@media (prefers-reduced-motion: ...)"`
- * in every component. Usage:
- *
- * ```ts
- * import { mediaQueries } from "astryxkit/design-system";
- *
- * const styles = stylex.create({
- *   thumb: {
- *     transitionDuration: {
- *       default: "var(--duration-fast)",
- *       [mediaQueries.reducedMotion]: "0ms",
- *     },
- *   },
- * });
- * ```
- *
- * Consuming builds must resolve StyleX constants across packages
- * (`unstable_moduleResolution` in the Babel plugin config).
- */
 export const mediaQueries = stylex.defineConsts({
   /** Pointer supports hover — gate hover-only affordances behind this. */
   canHover: "@media (hover: hover)",

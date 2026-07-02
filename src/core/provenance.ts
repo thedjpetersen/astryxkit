@@ -1,3 +1,9 @@
+// Content provenance in three states, chosen so an API can distinguish
+// "clear it" from "leave it alone": `null` means a human wrote this,
+// a string names the AI source that did, and `undefined` means the caller
+// said nothing about it. The framework normalizes and displays; whether
+// attribution is *required* stays host product policy.
+
 export const AI_ATTRIBUTION_MAX_LENGTH = 200;
 
 /** null means human-written; a string names the AI source of the text. */
