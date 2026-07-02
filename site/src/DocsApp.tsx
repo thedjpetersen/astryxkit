@@ -3,7 +3,6 @@ import {
   Badge,
   Button,
   Code,
-  CodeBlock as CoreCodeBlock,
   Heading,
   HStack,
   Icon,
@@ -18,10 +17,8 @@ import {
   TopNavItem,
   VStack,
   type BadgeVariant,
-  type CodeBlockProps,
   type IconName,
 } from "@astryxdesign/core";
-import { defineSyntaxTheme, SyntaxTheme } from "@astryxdesign/core/theme";
 import {
   borderVars,
   colorVars,
@@ -35,6 +32,9 @@ import {
 import * as stylex from "@stylexjs/stylex";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AstryxKitProvider } from "../../src/design-system";
+import { AnnotatedSource } from "./annotated";
+import { CodeListing, type CodeListingProps } from "./code";
+import { sourceModuleById, sourceModules } from "./source-data";
 
 type Surface = {
   body: string;
@@ -57,8 +57,19 @@ type LinkRow = {
   label: string;
 };
 
-type DocsSectionGroup = "Build" | "Concepts" | "Reference" | "Start";
-type DocsPageId = "build" | "overview" | "quickstart" | "reference" | "runtime";
+type DocsSectionGroup =
+  | "Build"
+  | "Concepts"
+  | "Reference"
+  | "Source"
+  | "Start";
+type DocsPageId =
+  | "build"
+  | "overview"
+  | "quickstart"
+  | "reference"
+  | "runtime"
+  | "source";
 
 type DocsSection = {
   group: DocsSectionGroup;
@@ -88,25 +99,6 @@ const registryVerifySnippet = `npm view astryxkit version dist-tags bin --json
 npx astryxkit@latest --version
 npx astryxkit@latest generators`;
 
-const docsSyntaxTheme = defineSyntaxTheme({
-  name: "astryxkit-docs-dark",
-  tokens: {
-    keyword: "#ff7b72",
-    string: "#a5d6ff",
-    comment: "#8b949e",
-    number: "#79c0ff",
-    function: "#d2a8ff",
-    type: "#ffa657",
-    variable: "#e6edf3",
-    operator: "#ff7b72",
-    constant: "#79c0ff",
-    tag: "#7ee787",
-    attribute: "#79c0ff",
-    property: "#79c0ff",
-    punctuation: "#c9d1d9",
-    background: "#1a2652",
-  },
-});
 
 const shellSnippet = `import { ShellHost } from "astryxkit/core";
 import { ShellFrame, ShellAppOutlet } from "astryxkit/react";
@@ -865,6 +857,21 @@ const docsSections: DocsSection[] = [
     pageId: "reference",
     summary: "Validation, UI inspection, and platform documentation checks.",
   },
+  ...sourceModules.map<DocsSection>((module) => ({
+    group: "Source",
+    icon:
+      module.surface === "astryxkit/react"
+        ? "viewColumns"
+        : module.surface === "astryxkit/worker"
+          ? "externalLink"
+          : module.surface === "astryxkit/design-system"
+            ? "checkDouble"
+            : "wrench",
+    id: module.id,
+    label: module.title,
+    pageId: "source",
+    summary: `${module.path} — ${module.summary}`,
+  })),
 ];
 
 const docsSectionGroups: Array<{
@@ -904,6 +911,10 @@ const docsSectionGroups: Array<{
     title: "Reference",
     ids: ["workers", "export-map", "troubleshooting", "reference", "ship"],
   },
+  {
+    title: "Source",
+    ids: sourceModules.map((module) => module.id),
+  },
 ];
 
 const topNavigationItems: TopNavigationItem[] = [
@@ -912,6 +923,7 @@ const topNavigationItems: TopNavigationItem[] = [
   { href: "#/runtime", label: "Runtime", pageId: "runtime" },
   { href: "#/build", label: "Build", pageId: "build" },
   { href: "#/reference", label: "Reference", pageId: "reference" },
+  { href: "#/source", label: "Source", pageId: "source" },
 ];
 
 const docsSectionIds = docsSections.map((section) => section.id);
@@ -959,6 +971,10 @@ const docsPages: Record<DocsPageId, { label: string; sectionIds: string[] }> = {
       "reference",
       "ship",
     ],
+  },
+  source: {
+    label: "Annotated source",
+    sectionIds: sourceModules.map((module) => module.id),
   },
 };
 
@@ -3319,35 +3335,19 @@ function SpecTable({ caption, rows }: { caption: string; rows: SpecRow[] }) {
       >
         {caption}
       </Text>
-      <table {...stylex.props(styles.specTable)}>
-        <thead>
-          <tr {...stylex.props(styles.tableRow)}>
-            <th {...stylex.props(styles.tableHead)}>Name</th>
-            <th {...stylex.props(styles.tableHead)}>Scope</th>
-            <th {...stylex.props(styles.tableHead)}>Details</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr
-              key={`${row.name}:${row.tag}`}
-              {...stylex.props(styles.tableRow)}
-            >
-              <td {...stylex.props(styles.tableCell, styles.tableNameCell)}>
-                <Code>{row.name}</Code>
-              </td>
-              <td {...stylex.props(styles.tableCell)}>
-                <Badge variant={row.tagVariant ?? "neutral"} label={row.tag} />
-              </td>
-              <td {...stylex.props(styles.tableCell)}>
-                <Text as="p" display="block" color="secondary">
-                  {row.detail}
-                </Text>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <ul {...stylex.props(styles.specList)}>
+        {rows.map((row) => (
+          <li key={`${row.name}:${row.tag}`} {...stylex.props(styles.specItem)}>
+            <span {...stylex.props(styles.specItemHead)}>
+              <Code>{row.name}</Code>
+              <Badge variant={row.tagVariant ?? "neutral"} label={row.tag} />
+            </span>
+            <Text as="p" display="block" color="secondary">
+              {row.detail}
+            </Text>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -3366,8 +3366,8 @@ function LinkList({ links }: { links: LinkRow[] }) {
   );
 }
 
-function CodeBlock({ highlightMode = "spans", ...props }: CodeBlockProps) {
-  return <CoreCodeBlock highlightMode={highlightMode} {...props} />;
+function CodeBlock(props: CodeListingProps) {
+  return <CodeListing {...props} />;
 }
 
 function isDocsPageId(value: string): value is DocsPageId {
@@ -3607,8 +3607,21 @@ function useDocsSearchShortcut(onSearchQueryChange: (query: string) => void) {
   }, [onSearchQueryChange]);
 }
 
-function DocsPage({ pageId }: { pageId: DocsPageId }) {
+function DocsPage({
+  pageId,
+  sectionId,
+}: {
+  pageId: DocsPageId;
+  sectionId?: string;
+}) {
   switch (pageId) {
+    case "source": {
+      const module =
+        (sectionId ? sourceModuleById.get(sectionId) : undefined) ??
+        sourceModules[0];
+
+      return <AnnotatedSource key={module.id} module={module} />;
+    }
     case "overview":
       return (
         <>
@@ -3676,24 +3689,22 @@ export function DocsApp() {
 
   return (
     <AstryxKitProvider appearance="system">
-      <SyntaxTheme theme={docsSyntaxTheme}>
-        <AppShell
-          xstyle={styles.docsShell}
-          height="auto"
-          variant="section"
-          contentPadding={0}
-          topNav={
-            <TopNavigation
-              activePage={route.pageId}
-              searchQuery={searchQuery}
-              onSearchQueryChange={setSearchQuery}
-            />
-          }
-          sideNav={<SideNavigation activeSection={activeSection} />}
-        >
-          <DocsPage pageId={route.pageId} />
-        </AppShell>
-      </SyntaxTheme>
+      <AppShell
+        xstyle={styles.docsShell}
+        height="auto"
+        variant="section"
+        contentPadding={0}
+        topNav={
+          <TopNavigation
+            activePage={route.pageId}
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+          />
+        }
+        sideNav={<SideNavigation activeSection={activeSection} />}
+      >
+        <DocsPage pageId={route.pageId} sectionId={route.sectionId} />
+      </AppShell>
     </AstryxKitProvider>
   );
 }
@@ -3789,7 +3800,7 @@ const styles = stylex.create({
       "@media (min-width: 1080px)": "minmax(0, 1fr) minmax(420px, 0.9fr)",
     },
     marginInline: "auto",
-    maxWidth: 1175,
+    maxWidth: 1320,
     width: "100%",
   },
   heroCopy: {
@@ -3886,7 +3897,7 @@ const styles = stylex.create({
     display: "grid",
     gap: spacingVars["--spacing-6"],
     marginInline: "auto",
-    maxWidth: 1175,
+    maxWidth: 1320,
     width: "100%",
   },
   sectionHeader: {
@@ -3902,7 +3913,7 @@ const styles = stylex.create({
     gap: spacingVars["--spacing-10"],
     gridTemplateColumns: {
       default: "minmax(0, 1fr)",
-      "@media (min-width: 980px)": "minmax(0, 1fr) minmax(420px, 1fr)",
+      "@media (min-width: 980px)": "minmax(0, 1fr) minmax(420px, 560px)",
     },
   },
   guideGrid: {
@@ -3911,7 +3922,7 @@ const styles = stylex.create({
     gap: spacingVars["--spacing-10"],
     gridTemplateColumns: {
       default: "minmax(0, 1fr)",
-      "@media (min-width: 1080px)": "minmax(0, 1fr) minmax(430px, 1fr)",
+      "@media (min-width: 1240px)": "minmax(0, 1fr) minmax(430px, 560px)",
     },
   },
   referenceSplit: {
@@ -3920,7 +3931,7 @@ const styles = stylex.create({
     gap: spacingVars["--spacing-10"],
     gridTemplateColumns: {
       default: "minmax(0, 1fr)",
-      "@media (min-width: 1080px)": "minmax(0, 1fr) minmax(420px, 1fr)",
+      "@media (min-width: 1240px)": "minmax(0, 1fr) minmax(420px, 560px)",
     },
   },
   copyBlock: {
@@ -4181,34 +4192,33 @@ const styles = stylex.create({
     paddingBlock: spacingVars["--spacing-3"],
     paddingInline: spacingVars["--spacing-4"],
   },
-  specTable: {
-    borderCollapse: "collapse",
-    minWidth: 640,
-    width: "100%",
+  specList: {
+    display: "grid",
+    listStyle: "none",
+    margin: 0,
+    padding: 0,
   },
-  tableRow: {
-    borderBottomColor: "#e3e8ee",
+  specItem: {
+    borderBottomColor: {
+      default: "#e3e8ee",
+      ":last-child": "transparent",
+    },
     borderBottomStyle: "solid",
     borderBottomWidth: borderVars["--border-width"],
-  },
-  tableHead: {
-    backgroundColor: "#f6f8fa",
-    color: "#697386",
-    fontFamily: typographyVars["--font-family-body"],
-    fontSize: textSizeVars["--font-size-sm"],
-    fontWeight: fontWeightVars["--font-weight-semibold"],
-    paddingBlock: spacingVars["--spacing-2"],
-    paddingInline: spacingVars["--spacing-4"],
-    textAlign: "left",
-    whiteSpace: "nowrap",
-  },
-  tableCell: {
+    display: "grid",
+    gap: spacingVars["--spacing-1"],
+    justifyItems: "start",
+    minWidth: 0,
+    overflowWrap: "anywhere",
     paddingBlock: spacingVars["--spacing-3"],
     paddingInline: spacingVars["--spacing-4"],
-    verticalAlign: "top",
   },
-  tableNameCell: {
-    whiteSpace: "nowrap",
+  specItemHead: {
+    alignItems: "center",
+    columnGap: spacingVars["--spacing-2"],
+    display: "flex",
+    flexWrap: "wrap",
+    rowGap: spacingVars["--spacing-1"],
   },
   linkPanel: {
     backgroundColor: "#fff",

@@ -276,7 +276,11 @@ The retrieved documentation notes for this repo are in
 
 ## Docs Site
 
-The static docs site lives in [`site/`](site/) and is built with Vite.
+The static docs site lives in [`site/`](site/) and is built with Vite. Code
+snippets are rendered with a symbol-aware highlighter: identifiers that match
+an AstryxKit export link to docco-style annotated source pages (the `Source`
+tab), where comment prose sits beside the code it describes and every
+declaration is deep-linkable via `#/source/<module>?s=<Symbol>`.
 The public site is hosted at https://thedjpetersen.github.io/astryxkit/.
 
 ```bash
