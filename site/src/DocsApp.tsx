@@ -30,7 +30,19 @@ import {
   typographyVars,
 } from "@astryxdesign/core/theme/tokens.stylex";
 import * as stylex from "@stylexjs/stylex";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
+import {
+  PreferencesStore,
+  type Disposable,
+  type PreferenceRing,
+  type PreferenceSchema,
+} from "../../src/core";
 import { AstryxKitProvider } from "../../src/design-system";
 import { AnnotatedSource } from "./annotated";
 import { CodeListing, type CodeListingProps } from "./code";
@@ -413,6 +425,78 @@ const packageSurfaces: Surface[] = [
   },
 ];
 
+const entitySnippet = `// Each app declares what it owns on its manifest…
+host.register({
+  // …identity, routing, commands as usual, plus:
+  entitySources: [
+    {
+      id: "tasks:entities",
+      appId: "tasks",
+      label: "Tasks",
+      kinds: [{ id: "task", label: "Task", pluralLabel: "Tasks" }],
+      list: async ({ workspace }) => ({
+        entities: (await fetchTasks(workspace.slug)).map((task) => ({
+          kind: "task",
+          route: \`/app/tasks/\${task.shortCode}\`,
+          title: task.title,
+          code: task.shortCode,
+          owner: task.ownerName,
+        })),
+      }),
+    },
+  ],
+});
+
+// …and the shell answers workspace-wide questions.
+const index = await host.listWorkspaceEntities(workspace);
+const popup = filterWorkspaceEntities(index.entities, "ana", 8);
+const backlinks = findEntityReferences(popup[0], index.corpus);`;
+
+const entityRows: SpecRow[] = [
+  {
+    detail:
+      "Optional manifest field: declared kinds plus one list({ workspace }) call. Sources registered by a manifest are disposed with it.",
+    name: "entitySources",
+    tag: "contribute",
+    tagVariant: "teal",
+  },
+  {
+    detail:
+      "Aggregates every source with Promise.allSettled. A broken app degrades to missing entities plus an entry in failedSourceIds — never a rejected index.",
+    name: "listWorkspaceEntities",
+    tag: "aggregate",
+    tagVariant: "blue",
+  },
+  {
+    detail:
+      "Merged registry of declared kinds (label, plural, accent) for legends and pickers; first declaration of an id wins.",
+    name: "entityKinds",
+    tag: "registry",
+    tagVariant: "purple",
+  },
+  {
+    detail:
+      "Mention identity defaults to the entity route; set mentionId when several entities share one route (people resolving to a shared directory).",
+    name: "mentionId",
+    tag: "identity",
+    tagVariant: "orange",
+  },
+  {
+    detail:
+      "Sources may return serialized rich-text bodies; findEntityReferences scans them for mention nodes to answer “where is this referenced?”.",
+    name: "corpus",
+    tag: "backlinks",
+    tagVariant: "green",
+  },
+  {
+    detail:
+      "Shared popup ranking — title prefix beats title substring beats code substring — so @-mentions feel identical in every app.",
+    name: "filterWorkspaceEntities",
+    tag: "rank",
+    tagVariant: "cyan",
+  },
+];
+
 const architectureRows: SpecRow[] = [
   {
     detail:
@@ -759,6 +843,15 @@ const docsSections: DocsSection[] = [
   },
   {
     group: "Concepts",
+    icon: "search",
+    id: "workspace-entities",
+    label: "Workspace entities",
+    pageId: "runtime",
+    summary:
+      "App-contributed entity sources, aggregation with failure isolation, mentions, and backlinks.",
+  },
+  {
+    group: "Concepts",
     icon: "menu",
     id: "react",
     label: "React shell",
@@ -893,6 +986,7 @@ const docsSectionGroups: Array<{
       "commands",
       "preferences",
       "events",
+      "workspace-entities",
       "react",
       "design-system",
     ],
@@ -948,6 +1042,7 @@ const docsPages: Record<DocsPageId, { label: string; sectionIds: string[] }> = {
       "commands",
       "preferences",
       "events",
+      "workspace-entities",
       "react",
       "design-system",
     ],
@@ -2773,6 +2868,7 @@ function Preferences() {
           maxHeight={560}
         />
       </section>
+      <PreferenceLab />
     </Band>
   );
 }
@@ -2787,6 +2883,283 @@ function Layer({ body, label }: { body: string; label: string }) {
         {body}
       </Text>
     </li>
+  );
+}
+
+const labPreferenceKey = "catalog.density";
+
+const labPreferenceSchema: PreferenceSchema = {
+  key: labPreferenceKey,
+  appId: "catalog",
+  category: "Display",
+  label: "Density",
+  description: "Row spacing for the Catalog list surface.",
+  type: "enum",
+  ring: "app",
+  featureId: "quick-filter",
+  defaultValue: "comfortable",
+  options: [
+    { label: "Compact", value: "compact" },
+    { label: "Comfortable", value: "comfortable" },
+    { label: "Spacious", value: "spacious" },
+  ],
+};
+
+const labSeedValues: Record<PreferenceRing, string> = {
+  platform: "comfortable",
+  product: "compact",
+  app: "spacious",
+  feature: "compact",
+};
+
+const labRingRows: Array<{ body: string; ring: PreferenceRing }> = [
+  {
+    ring: "feature",
+    body: "Seed scoped to catalog.quick-filter — the most specific ring.",
+  },
+  { ring: "app", body: "Seed scoped to the catalog app." },
+  { ring: "product", body: "Seed shared by every app in the product." },
+  { ring: "platform", body: "Seed for the whole install, keyed by platformId." },
+];
+
+/**
+ * A real PreferencesStore with one declared schema. Every toggle below is a
+ * live `contributeValue` / `set` / `reset` call, and the readout is
+ * `inspect()` verbatim — the lab cannot drift from the runtime because it
+ * *is* the runtime.
+ */
+function PreferenceLab() {
+  const lab = useMemo(() => {
+    const preferences = new PreferencesStore("northstar");
+    const seeds = new Map<PreferenceRing, Disposable>();
+
+    preferences.declare(labPreferenceSchema);
+    seeds.set(
+      "platform",
+      preferences.contributeValue(
+        labPreferenceKey,
+        labSeedValues.platform,
+        "platform",
+      ),
+    );
+    seeds.set(
+      "app",
+      preferences.contributeValue(labPreferenceKey, labSeedValues.app, "app"),
+    );
+
+    return { preferences, seeds };
+  }, []);
+  const version = useSyncExternalStore(
+    (listener) => lab.preferences.subscribe(listener).dispose,
+    () => lab.preferences.snapshotVersion(),
+    () => 0,
+  );
+  const inspection = useMemo(
+    () => lab.preferences.inspect(labPreferenceKey),
+    [lab, version],
+  );
+  const winner =
+    inspection.source.layer === "user"
+      ? "user"
+      : inspection.isDefault
+        ? "default"
+        : inspection.source.ring;
+
+  const toggleSeed = (ring: PreferenceRing) => {
+    const existing = lab.seeds.get(ring);
+
+    if (existing) {
+      existing.dispose();
+      lab.seeds.delete(ring);
+      return;
+    }
+
+    lab.seeds.set(
+      ring,
+      lab.preferences.contributeValue(
+        labPreferenceKey,
+        labSeedValues[ring],
+        ring,
+      ),
+    );
+  };
+
+  return (
+    <section
+      {...stylex.props(styles.interactivePanel)}
+      aria-labelledby="preference-lab-title"
+    >
+      <header {...stylex.props(styles.interactiveHeader)}>
+        <section {...stylex.props(styles.interactiveTitle)}>
+          <Badge variant="neutral" label="Live model" />
+          <VStack gap={1}>
+            <Heading level={3} id="preference-lab-title">
+              Preference resolution lab
+            </Heading>
+            <Text as="p" display="block" color="secondary">
+              A real <Code>PreferencesStore</Code> resolving{" "}
+              <Code>catalog.density</Code>. Contribute and remove seeds, set a
+              user override, and watch which layer wins.
+            </Text>
+          </VStack>
+        </section>
+        <Badge
+          variant={inspection.hasUserOverride ? "success" : "neutral"}
+          label={`Resolved: ${String(inspection.value)}`}
+        />
+      </header>
+      <section {...stylex.props(styles.prefLabGrid)}>
+        <ol {...stylex.props(styles.prefCascade)} aria-live="polite">
+          <li
+            {...stylex.props(
+              styles.prefRow,
+              winner === "user" && styles.prefRowWin,
+            )}
+          >
+            <section {...stylex.props(styles.prefRowMain)}>
+              <HStack gap={2} align="center" wrap="wrap">
+                <Text type="label" weight="semibold">
+                  User
+                </Text>
+                {winner === "user" ? (
+                  <Badge variant="success" label="wins" />
+                ) : null}
+                {inspection.layers.user != null ? (
+                  <Code>{String(inspection.layers.user)}</Code>
+                ) : (
+                  <Text type="supporting">no override</Text>
+                )}
+              </HStack>
+              <Text as="p" display="block" type="supporting" color="secondary">
+                An explicit choice, stored at the schema&apos;s own ring. Beats
+                every seed until reset.
+              </Text>
+            </section>
+            <HStack gap={1} align="center" wrap="wrap">
+              {(labPreferenceSchema.options ?? []).map((option) => (
+                <Button
+                  key={String(option.value)}
+                  label={option.label}
+                  size="sm"
+                  variant={
+                    inspection.layers.user === option.value
+                      ? "secondary"
+                      : "ghost"
+                  }
+                  onClick={() =>
+                    lab.preferences.set(labPreferenceKey, option.value, "user")
+                  }
+                />
+              ))}
+              <Button
+                label="Reset"
+                size="sm"
+                variant="ghost"
+                isDisabled={!inspection.hasUserOverride}
+                onClick={() => lab.preferences.reset(labPreferenceKey, "user")}
+              />
+            </HStack>
+          </li>
+          {labRingRows.map(({ body, ring }) => {
+            const isSeeded = lab.seeds.has(ring);
+
+            return (
+              <li
+                key={ring}
+                {...stylex.props(
+                  styles.prefRow,
+                  winner === ring && styles.prefRowWin,
+                )}
+              >
+                <section {...stylex.props(styles.prefRowMain)}>
+                  <HStack gap={2} align="center" wrap="wrap">
+                    <Text type="label" weight="semibold">
+                      {ring[0].toUpperCase() + ring.slice(1)}
+                    </Text>
+                    {winner === ring ? (
+                      <Badge variant="success" label="wins" />
+                    ) : null}
+                    {isSeeded ? (
+                      <Code>{labSeedValues[ring]}</Code>
+                    ) : (
+                      <Text type="supporting">no seed</Text>
+                    )}
+                  </HStack>
+                  <Text
+                    as="p"
+                    display="block"
+                    type="supporting"
+                    color="secondary"
+                  >
+                    {body}
+                  </Text>
+                </section>
+                <Button
+                  label={
+                    lab.seeds.has(ring)
+                      ? "Remove seed"
+                      : `Seed "${labSeedValues[ring]}"`
+                  }
+                  size="sm"
+                  variant={lab.seeds.has(ring) ? "secondary" : "ghost"}
+                  onClick={() => toggleSeed(ring)}
+                />
+              </li>
+            );
+          })}
+          <li
+            {...stylex.props(
+              styles.prefRow,
+              winner === "default" && styles.prefRowWin,
+            )}
+          >
+            <section {...stylex.props(styles.prefRowMain)}>
+              <HStack gap={2} align="center" wrap="wrap">
+                <Text type="label" weight="semibold">
+                  Default
+                </Text>
+                {winner === "default" ? (
+                  <Badge variant="success" label="wins" />
+                ) : null}
+                <Code>{String(labPreferenceSchema.defaultValue)}</Code>
+              </HStack>
+              <Text as="p" display="block" type="supporting" color="secondary">
+                The schema&apos;s own value — the floor the cascade can never
+                fall through.
+              </Text>
+            </section>
+          </li>
+        </ol>
+        <section {...stylex.props(styles.prefReadout)} aria-live="polite">
+          <Text type="label" weight="semibold">
+            inspect(&quot;{labPreferenceKey}&quot;)
+          </Text>
+          <HStack gap={2} align="center" wrap="wrap">
+            <Badge
+              variant="blue"
+              label={`source: ${inspection.source.ring}:${inspection.source.scope}`}
+            />
+            <Badge
+              variant={inspection.hasUserOverride ? "success" : "neutral"}
+              label={
+                inspection.hasUserOverride ? "user override" : "no override"
+              }
+            />
+            <Badge
+              variant={inspection.isInherited ? "purple" : "neutral"}
+              label={inspection.isInherited ? "inherited" : "own ring"}
+            />
+          </HStack>
+          <Text as="p" display="block" type="supporting" color="secondary">
+            Settings UI renders exactly this payload: the resolved value, the
+            ring and scope that supplied it, whether it was inherited from a
+            wider ring, and whether a user override is in effect. Disposing a
+            seed restores whatever it displaced — try removing the app seed
+            while a wider ring is active.
+          </Text>
+        </section>
+      </section>
+    </section>
   );
 }
 
@@ -2831,6 +3204,55 @@ function RuntimeState() {
             maxHeight={460}
           />
         </aside>
+      </section>
+    </Band>
+  );
+}
+
+function WorkspaceEntities() {
+  return (
+    <Band id="workspace-entities" muted>
+      <section {...stylex.props(styles.referenceSplit)}>
+        <section {...stylex.props(styles.copyBlock)}>
+          <SectionHeader
+            badge="Entities"
+            title="Workspace entities are contributed, aggregated, and mention-ready."
+          >
+            Cross-app surfaces — @-mention popups, reference explorers,
+            workspace pickers — need one index over every app&apos;s records.
+            Apps declare entity sources on their manifests; the host
+            aggregates them without ever learning an app&apos;s API shape.
+          </SectionHeader>
+          <ol {...stylex.props(styles.layerStack)}>
+            <Layer
+              label="Declare"
+              body="A manifest names its entity kinds and how to list them for a workspace."
+            />
+            <Layer
+              label="Aggregate"
+              body="listWorkspaceEntities runs every source with per-source failure isolation."
+            />
+            <Layer
+              label="Rank"
+              body="filterWorkspaceEntities gives every @-popup the same relevance order."
+            />
+            <Layer
+              label="Reference"
+              body="findEntityReferences scans the corpus for mention nodes — instant backlinks."
+            />
+          </ol>
+          <SpecTable caption="Entity surface" rows={entityRows} />
+        </section>
+        <CodeBlock
+          title="entity-sources.ts"
+          language="ts"
+          code={entitySnippet}
+          width="100%"
+          xstyle={styles.codeBlockStripe}
+          isWrapped
+          hasLineNumbers
+          maxHeight={640}
+        />
       </section>
     </Band>
   );
@@ -3078,6 +3500,110 @@ function CliWorkflows() {
   );
 }
 
+type GeneratorGuide = {
+  after: string[];
+  command: string;
+  creates: string;
+  inside: string[];
+  kind: string;
+  nameFormat: string;
+};
+
+const generatorGuides: GeneratorGuide[] = [
+  {
+    kind: "shell",
+    command: "ak g shell Northstar",
+    nameFormat: "<product-name>",
+    creates: "src/shell/northstar.tsx",
+    inside: [
+      "A ShellHost configured with docs and preferences routes.",
+      "A workspace object derived from the product name (name + slug).",
+      "NorthstarShell: AstryxKitProvider wrapping ShellFrame wrapping ShellAppOutlet, with navigation delegated to host.navigate.",
+    ],
+    after: [
+      "Render NorthstarShell from your entry module.",
+      "Register app manifests on northstarHost with registerAll().",
+      "Swap the default navigate for your router via ShellHostOptions.",
+    ],
+  },
+  {
+    kind: "app",
+    command: "ak g app Catalog",
+    nameFormat: "<app-name>",
+    creates: "src/apps/catalog/index.tsx",
+    inside: [
+      "A full ShellAppManifest: id, route /app/catalog, entryUrl, icon, owner team.",
+      "Two commands — Open Catalog (a page command) and Refresh Catalog, gated with when: \"appActive == 'catalog'\".",
+      "A catalog.density enum preference with compact/comfortable/spacious options.",
+      "activate() that binds the refresh handler through disposeWithApp and emits catalog.refreshed on the event bus.",
+      "A starter Astryx surface whose buttons run real commands via host.runCommand.",
+    ],
+    after: [
+      "host.register(catalogManifest) in your shell module.",
+      "Point entryUrl at the production module URL your bundler emits.",
+      "Replace the starter surface; keep the manifest contract.",
+    ],
+  },
+  {
+    kind: "command",
+    command: "ak g command catalog.refresh",
+    nameFormat: "<app-id>.<command-name>",
+    creates: "src/commands/catalog/refresh.ts",
+    inside: [
+      "A namespaced CommandContribution, gated to its app with a when clause.",
+      "bindRefreshCommand(context, handler): a binder that routes through disposeWithApp so the handler dies with the app.",
+    ],
+    after: [
+      "Add the contribution to the manifest's commands array (declared early, palette-visible immediately).",
+      "Call the binder inside activate() with the real handler.",
+    ],
+  },
+  {
+    kind: "preference",
+    command: "ak g preference catalog.density",
+    nameFormat: "<app-id>.<preference-name>",
+    creates: "src/preferences/catalog/density.ts",
+    inside: [
+      "A namespaced PreferenceSchema — boolean, defaultValue true, labeled and categorized for settings UI.",
+    ],
+    after: [
+      "Adjust type, options, and defaultValue to the real setting.",
+      "Add it to the manifest's preferences array; the settings panel renders it from there.",
+      "Read it with usePreferenceInspection or resolve it in plain code.",
+    ],
+  },
+  {
+    kind: "worker-route",
+    command: "ak g worker-route catalog",
+    nameFormat: "<route-name>",
+    creates: "src/worker/routes/catalog.ts",
+    inside: [
+      "A GET WorkerRoute at /api/catalog answering through the shared json() helper.",
+      "A typed Env alias ready to narrow to your real bindings.",
+    ],
+    after: [
+      "Add the route to createWorkerRouter({ routes }).",
+      "Tighten the Env type to the bindings the route actually uses.",
+      "Grow methods and regex params as the API surface demands.",
+    ],
+  },
+  {
+    kind: "d1-repository",
+    command: "ak g d1-repository customer",
+    nameFormat: "<resource-name>",
+    creates: "src/worker/repositories/customer-repository.ts",
+    inside: [
+      "A CustomerRecord type and createCustomerRepository(env, binding = \"DB\") built on requireD1Database.",
+      "list/create/delete methods using prepared statements against a customer table (hyphenated names become underscores in SQL).",
+    ],
+    after: [
+      "Write the migration yourself — schema design is deliberately not generated.",
+      "Extend the record type and queries to the real resource.",
+      "Wire the repository into Worker routes.",
+    ],
+  },
+];
+
 function Generators() {
   return (
     <Band id="generators" muted>
@@ -3093,13 +3619,69 @@ function Generators() {
           </SectionHeader>
           <section {...stylex.props(styles.notePanel)}>
             <Text as="p" display="block" color="secondary">
-              Generated files are guarded by default. Use <Code>--dry-run</Code>
-              to preview, <Code>--dir</Code> to choose an output root, and
-              <Code>--force</Code> only when an overwrite is intentional.
+              Generated files are guarded by default: an existing target aborts
+              with an error naming the file, <Code>--dry-run</Code> prints the
+              create/skip plan without writing, <Code>--dir</Code> moves the
+              output root, <Code>--force</Code> makes an overwrite intentional,
+              and every write is confined to the working directory.
             </Text>
           </section>
         </section>
         <SpecTable caption="Generator outputs" rows={generatorRows} />
+      </section>
+      <section
+        {...stylex.props(styles.generatorGuideList)}
+        aria-label="Generator deep dive"
+      >
+        {generatorGuides.map((guide) => (
+          <article key={guide.kind} {...stylex.props(styles.generatorGuideCard)}>
+            <header {...stylex.props(styles.generatorGuideHead)}>
+              <HStack gap={2} align="center" wrap="wrap">
+                <Badge variant="blue" label={guide.kind} />
+                <Code>{guide.command}</Code>
+              </HStack>
+              <Text type="supporting" color="secondary">
+                {guide.nameFormat}
+              </Text>
+            </header>
+            <section {...stylex.props(styles.generatorGuideBody)}>
+              <section {...stylex.props(styles.generatorGuideCol)}>
+                <Text type="label" weight="semibold">
+                  Creates
+                </Text>
+                <Code>{guide.creates}</Code>
+              </section>
+              <section {...stylex.props(styles.generatorGuideCol)}>
+                <Text type="label" weight="semibold">
+                  Inside
+                </Text>
+                <ul {...stylex.props(styles.generatorGuideItems)}>
+                  {guide.inside.map((item) => (
+                    <li key={item}>
+                      <Text as="p" display="block" type="supporting" color="secondary">
+                        {item}
+                      </Text>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+              <section {...stylex.props(styles.generatorGuideCol)}>
+                <Text type="label" weight="semibold">
+                  Then
+                </Text>
+                <ul {...stylex.props(styles.generatorGuideItems)}>
+                  {guide.after.map((item) => (
+                    <li key={item}>
+                      <Text as="p" display="block" type="supporting" color="secondary">
+                        {item}
+                      </Text>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            </section>
+          </article>
+        ))}
       </section>
     </Band>
   );
@@ -3647,6 +4229,7 @@ function DocsPage({
           <Commands />
           <Preferences />
           <RuntimeState />
+          <WorkspaceEntities />
           <ReactShell />
           <DesignSystem />
         </>
@@ -4152,6 +4735,105 @@ const styles = stylex.create({
     borderWidth: borderVars["--border-width"],
     listStyle: "none",
     padding: spacingVars["--spacing-4"],
+  },
+  prefLabGrid: {
+    alignItems: "start",
+    display: "grid",
+    gap: spacingVars["--spacing-5"],
+    gridTemplateColumns: {
+      default: "minmax(0, 1fr)",
+      "@media (min-width: 1100px)": "minmax(0, 1.4fr) minmax(280px, 1fr)",
+    },
+  },
+  prefCascade: {
+    display: "grid",
+    gap: spacingVars["--spacing-2"],
+    listStyle: "none",
+    margin: 0,
+    padding: 0,
+  },
+  prefRow: {
+    alignItems: "start",
+    backgroundColor: "#fff",
+    borderColor: "#e3e8ee",
+    borderRadius: radiusVars["--radius-inner"],
+    borderStyle: "solid",
+    borderWidth: borderVars["--border-width"],
+    display: "grid",
+    gap: spacingVars["--spacing-3"],
+    gridTemplateColumns: {
+      default: "minmax(0, 1fr)",
+      "@media (min-width: 760px)": "minmax(0, 1fr) auto",
+    },
+    padding: spacingVars["--spacing-3"],
+    transitionDuration: {
+      default: "150ms",
+      "@media (prefers-reduced-motion: reduce)": "0ms",
+    },
+    transitionProperty: "border-color, box-shadow",
+  },
+  prefRowWin: {
+    borderColor: colorVars["--color-success"],
+    boxShadow: "0 0 0 1px " + "rgba(13, 134, 38, 0.35)",
+  },
+  prefRowMain: {
+    display: "grid",
+    gap: spacingVars["--spacing-1"],
+    minWidth: 0,
+  },
+  prefReadout: {
+    backgroundColor: "#f6f8fa",
+    borderColor: "#e3e8ee",
+    borderRadius: radiusVars["--radius-inner"],
+    borderStyle: "solid",
+    borderWidth: borderVars["--border-width"],
+    display: "grid",
+    gap: spacingVars["--spacing-3"],
+    justifyItems: "start",
+    padding: spacingVars["--spacing-4"],
+  },
+  generatorGuideList: {
+    display: "grid",
+    gap: spacingVars["--spacing-3"],
+  },
+  generatorGuideCard: {
+    backgroundColor: "#fff",
+    borderColor: "#e3e8ee",
+    borderRadius: radiusVars["--radius-inner"],
+    borderStyle: "solid",
+    borderWidth: borderVars["--border-width"],
+    boxShadow: "0 1px 1px rgba(16, 17, 26, 0.08)",
+    display: "grid",
+    gap: spacingVars["--spacing-4"],
+    padding: spacingVars["--spacing-4"],
+  },
+  generatorGuideHead: {
+    alignItems: "center",
+    display: "flex",
+    flexWrap: "wrap",
+    gap: spacingVars["--spacing-3"],
+    justifyContent: "space-between",
+  },
+  generatorGuideBody: {
+    display: "grid",
+    gap: spacingVars["--spacing-4"],
+    gridTemplateColumns: {
+      default: "minmax(0, 1fr)",
+      "@media (min-width: 980px)": "minmax(180px, 0.7fr) minmax(0, 1.3fr) minmax(0, 1.1fr)",
+    },
+  },
+  generatorGuideCol: {
+    display: "grid",
+    gap: spacingVars["--spacing-2"],
+    justifyItems: "start",
+    minWidth: 0,
+  },
+  generatorGuideItems: {
+    display: "grid",
+    gap: spacingVars["--spacing-2"],
+    listStyle: "none",
+    margin: 0,
+    padding: 0,
   },
   decisionList: {
     display: "grid",

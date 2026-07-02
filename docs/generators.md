@@ -21,6 +21,94 @@ ak g <generator> <name>
 | `worker-route <route-name>`             | `src/worker/routes/<route-name>.ts`                     | Cloudflare Worker APIs should start as explicit `WorkerRoute` modules using shared JSON helpers.                                      |
 | `d1-repository <resource-name>`         | `src/worker/repositories/<resource-name>-repository.ts` | D1 access benefits from small typed repositories that keep binding lookup and prepared statements close together.                     |
 
+## What Each Generator Writes
+
+The table above says where files land; this section says what is inside them
+and what to wire up afterward.
+
+### `shell <product-name>`
+
+`ak g shell Northstar` writes `src/shell/northstar.tsx` containing:
+
+- a `ShellHost` configured with `defaultDocsRoute: "/docs"` and
+  `preferencesRoute: "/preferences"`, exported as `northstarHost`;
+- a workspace object (`name: "Northstar"`, `slug: "northstar"`) derived from
+  the product name;
+- `NorthstarShell`, a component wiring `AstryxKitProvider` → `ShellFrame` →
+  `ShellAppOutlet`, with navigation delegated to `northstarHost.navigate`.
+
+Afterward: render `NorthstarShell` from your entry module, register app
+manifests with `northstarHost.registerAll([...])`, and replace the default
+navigate with your router through `ShellHostOptions.navigate` when you have
+one.
+
+### `app <app-name>`
+
+`ak g app Catalog` writes `src/apps/catalog/index.tsx` containing:
+
+- a complete `ShellAppManifest`: id `catalog`, route `/app/catalog`,
+  `entryUrl`, icon, and owner team;
+- two commands — `catalog.open` (a page command in the Apps category) and
+  `catalog.refresh`, gated with `when: "appActive == 'catalog'"` so it only
+  appears while the app is active;
+- a `catalog.density` enum preference with compact/comfortable/spacious
+  options and a comfortable default;
+- an `activate()` function that binds the refresh handler through
+  `context.disposeWithApp` (so it dies with the app) and emits a
+  `catalog.refreshed` event on the shared bus;
+- a starter Astryx surface whose buttons execute real commands via
+  `host.runCommand`.
+
+Afterward: `host.register(catalogManifest)` in your shell module, point
+`entryUrl` at the module URL your production bundler emits, and replace the
+starter surface while keeping the manifest contract.
+
+### `command <app-id>.<command-name>`
+
+`ak g command catalog.refresh` writes `src/commands/catalog/refresh.ts`
+containing a namespaced `CommandContribution` (gated to the active app with a
+`when` clause) and `bindRefreshCommand(context, handler)` — a binder that
+routes through `disposeWithApp` so the handler is disposed on deactivation.
+
+Afterward: add the contribution to the manifest's `commands` array (declared
+early, so it is palette-visible before the module loads) and call the binder
+inside `activate()` with the real handler.
+
+### `preference <app-id>.<preference-name>`
+
+`ak g preference catalog.density` writes
+`src/preferences/catalog/density.ts` containing a namespaced
+`PreferenceSchema` — boolean, `defaultValue: true`, labeled and categorized
+for the generated settings UI.
+
+Afterward: adjust `type`, `options`, and `defaultValue` to the real setting,
+add the schema to the manifest's `preferences` array (the settings panel
+renders it from there), and read it with `usePreferenceInspection` or
+`resolvePreference`.
+
+### `worker-route <route-name>`
+
+`ak g worker-route catalog` writes `src/worker/routes/catalog.ts` containing
+a GET `WorkerRoute` at `/api/catalog` that answers through the shared
+`json()` helper, plus a typed `Env` alias.
+
+Afterward: add the route to `createWorkerRouter({ routes })`, tighten the
+`Env` type to the bindings the route actually uses, and grow methods and
+regex parameters as the API surface demands.
+
+### `d1-repository <resource-name>`
+
+`ak g d1-repository customer` writes
+`src/worker/repositories/customer-repository.ts` containing a
+`CustomerRecord` type and `createCustomerRepository(env, binding = "DB")`
+built on `requireD1Database`, with `list`/`create`/`delete` methods using
+prepared statements against a `customer` table (hyphenated resource names
+become underscores in the starter SQL).
+
+Afterward: write the migration yourself — schema design is deliberately not
+generated — then extend the record type and queries to the real resource and
+wire the repository into Worker routes.
+
 ## Output Contract
 
 Generated files should be useful immediately, but they should not pretend to be
