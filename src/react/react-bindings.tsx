@@ -128,6 +128,48 @@ export function useShellTopNavMount({
   }, [appId, area, content, host, id, order]);
 }
 
+export function useShellSideNavMounts(host: ShellHost) {
+  const version = useHostVersion(host);
+
+  return useMemo(() => host.sideNavMounts(), [host, version]);
+}
+
+export function useShellSideNavMount({
+  appId,
+  content,
+  host,
+  id,
+  order,
+}: {
+  appId?: string;
+  content: ReactNode;
+  host: ShellHost;
+  id: string;
+  order?: number;
+}) {
+  useEffect(() => {
+    const registration = host.mountSideNav({
+      appId,
+      content,
+      id,
+      order,
+    });
+
+    return () => {
+      registration.dispose();
+    };
+  }, [appId, host, id, order]);
+
+  useEffect(() => {
+    host.updateSideNavMount({
+      appId,
+      content,
+      id,
+      order,
+    });
+  }, [appId, content, host, id, order]);
+}
+
 export function useShellTopNavHeader({
   appId,
   content,

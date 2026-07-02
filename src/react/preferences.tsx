@@ -230,18 +230,19 @@ function PreferenceRow({
       <VStack gap={1} xstyle={styles.settingMeta}>
         <HStack gap={2} align="center" wrap="wrap">
           <Text type="label">{schema.label}</Text>
-          <Badge
-            label={scopeLabel(inspection.scope)}
-            variant={scopeVariant(inspection.scope)}
-          />
+          {inspection.scope === "default" ? null : (
+            <Badge
+              label={scopeLabel(inspection.scope)}
+              variant={scopeVariant(inspection.scope)}
+            />
+          )}
         </HStack>
         <Text type="supporting" maxLines={2}>
           {schema.description ?? schema.key}
         </Text>
-        <Text type="code" color="secondary" wordBreak="break-all">
-          {schema.key}
-        </Text>
-        <Text type="supporting">{sourceDescription(inspection)}</Text>
+        {inspection.hasUserOverride || inspection.isInherited ? (
+          <Text type="supporting">{sourceDescription(inspection)}</Text>
+        ) : null}
       </VStack>
       <HStack gap={2} align="center" wrap="wrap">
         <PreferenceControl schema={schema} value={value} host={host} />

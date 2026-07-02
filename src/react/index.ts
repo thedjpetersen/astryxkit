@@ -9,6 +9,8 @@ export {
   useHostVersion,
   usePreferenceInspection,
   useSettingsGroups,
+  useShellSideNavMount,
+  useShellSideNavMounts,
   useShellTopNavHeader,
   useShellTopNavMount,
   useShellTopNavMounts,
