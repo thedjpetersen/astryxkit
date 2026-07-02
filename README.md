@@ -19,10 +19,10 @@ can build on.
 
 | Export                    | Purpose                                                                                                                  |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `astryxkit/core`          | Shell runtime: commands, context keys, events, app manifests, activation lifecycle, preferences, and import-map helpers. |
-| `astryxkit/react`         | React bindings, the Astryx shell frame, app outlet, command palette, and preferences panel.                              |
-| `astryxkit/design-system` | Default Astryx theme wrapper, appearance mode storage, and shared design-system helpers.                                 |
-| `astryxkit/worker`        | Small Cloudflare Workers HTTP and D1 helpers that keep API boundaries explicit.                                          |
+| `astryxkit/core`          | Shell runtime: commands, context keys, events, app manifests, activation lifecycle, preferences, workspace entity sources, AI-attribution normalization, and import-map helpers. |
+| `astryxkit/react`         | React bindings, the Astryx shell frame, app outlet, command palette, preferences panel, share-code chip, and AI-attribution badge.                                               |
+| `astryxkit/design-system` | Default Astryx theme wrapper, appearance mode storage, and shared media-query constants.                                                                                         |
+| `astryxkit/worker`        | Small Cloudflare Workers HTTP, D1, and short-link helpers that keep API boundaries explicit.                                                                                     |
 
 ## When To Use It
 
@@ -114,6 +114,43 @@ Shortcode lookup is case-insensitive and accepts a leading `#` in the query.
 Use `shortcodes` for canonical record IDs; keep `keywords` for broad discovery
 terms and synonyms.
 
+Apps can also contribute **workspace entity sources**: how to enumerate the
+things they own (tasks, documents, rooms) so shell surfaces like mention
+popups and reference explorers can span every app without hardcoding any of
+them. The host aggregates all sources with per-source failure isolation.
+
+```ts
+host.register({
+  // ...manifest fields as above
+  entitySources: [
+    {
+      id: "tasks:entities",
+      appId: "tasks",
+      label: "Tasks",
+      kinds: [{ id: "task", label: "Task", pluralLabel: "Tasks" }],
+      list: async ({ workspace }) => ({
+        entities: (await fetchTasks(workspace.slug)).map((task) => ({
+          kind: "task",
+          route: `/app/tasks/${task.shortCode}`,
+          title: task.title,
+          code: task.shortCode,
+          owner: task.ownerName,
+        })),
+      }),
+    },
+  ],
+});
+
+const index = await host.listWorkspaceEntities(workspace);
+// index.entities, index.corpus, index.failedSourceIds
+```
+
+Sources may also return a `corpus` of serialized rich-text bodies;
+`findEntityReferences()` scans it to answer "where is this entity
+mentioned?", and `filterWorkspaceEntities()` ranks entities for `@`-style
+popups. Entity identity for mentions defaults to the entity route; set
+`mentionId` when several entities share one route.
+
 ## React Shell
 
 ```tsx
@@ -139,6 +176,23 @@ export function App() {
 }
 ```
 
+The React package also ships two small cross-app primitives:
+
+```tsx
+import { AiAttributionBadge, ShareCodeChip } from "astryxkit/react";
+
+// Click-to-copy short-link chip; hover shows the full share URL.
+<ShareCodeChip code="DLNCHBRF" sharePath="/d/DLNCHBRF" label="Document link" />;
+
+// Visible provenance for AI-produced text; renders nothing for null.
+<AiAttributionBadge attribution="Workers AI · Whisper" />;
+```
+
+`ShareCodeChip` pairs with the Worker short-link helpers below so every app
+presents codes the same way. `AiAttributionBadge` pairs with
+`normalizeAiAttribution()` from `astryxkit/core` so AI-generated content
+always carries a visible source.
+
 ## Design System
 
 Wrap host applications in `AstryxKitProvider` when they should inherit the
@@ -161,11 +215,56 @@ follow the local Astryx instructions in `AGENTS.md`: inspect the relevant
 template, read every component doc you use, prefer component props, and use
 `xstyle` for custom styling.
 
+The design-system module also exports shared `mediaQueries` constants
+(StyleX `defineConsts`) so apps stop re-declaring capability and breakpoint
+queries per component:
+
+```ts
+import { mediaQueries } from "astryxkit/design-system";
+
+const styles = stylex.create({
+  trigger: {
+    backgroundColor: {
+      default: "transparent",
+      ":hover": {
+        default: "transparent",
+        [mediaQueries.canHover]: "var(--color-overlay-hover)",
+      },
+    },
+    transitionDuration: {
+      default: "var(--duration-fast)",
+      [mediaQueries.reducedMotion]: "0ms",
+    },
+  },
+});
+```
+
+Cross-package StyleX constants require `unstable_moduleResolution` in the
+consuming app's StyleX Babel config.
+
 ## Cloudflare Workers
 
 AstryxKit keeps Worker helpers small and explicit. Current Cloudflare docs
 should still be checked before changing Workers, D1, KV, R2, Durable Object,
 Queue, Vectorize, Workers AI, or Agents SDK behavior.
+
+Beyond routing, JSON, and D1 helpers, the Worker module covers platform-wide
+short links: `generateShortCode()` for opaque codes (`D7KQ2M9X`),
+`generateReadableCode()` for read-aloud codes (`kfq4-x2mh`), and
+`createShortLinkRoute()` to resolve `/d/<code>`-style paths into app routes:
+
+```ts
+import { createShortLinkRoute, createWorkerRouter } from "astryxkit/worker";
+
+const router = createWorkerRouter<Env>({
+  routes: [
+    createShortLinkRoute({
+      pathPrefix: "/d",
+      resolve: (code, { env }) => lookupDocumentRoute(env, code),
+    }),
+  ],
+});
+```
 
 - Workers docs: https://developers.cloudflare.com/workers/
 - Workers limits: https://developers.cloudflare.com/workers/platform/limits/

@@ -27,6 +27,7 @@ The core runtime owns:
 - layered preferences across platform, product, app, feature, user, and default
 - app manifest registration and activation lifecycle
 - app-scoped disposal for handlers, command sources, and subscriptions
+- workspace entity aggregation across app-contributed sources
 - import-map generation for independently shipped app modules
 
 Applications contribute `ShellAppManifest` objects. Manifests declare commands and
@@ -83,6 +84,45 @@ User values are stored separately from contributed seed values. Inspection keeps
 the resolved value, source ring, source scope, inheritance state, user override
 state, and per-layer values available to settings UI.
 
+### Workspace Entities
+
+Cross-app features like `@`-mentions, reference explorers, and "everything the
+workspace can point at" pickers need one index over every app's records. The
+wrong shape for that is a hardcoded aggregator that knows each app's API — it
+recreates the coupling the shell exists to remove.
+
+Instead, manifests contribute `entitySources`. Each source declares:
+
+- the entity `kinds` it produces (id, label, plural label, optional accent);
+- a `list({ workspace })` function returning entity refs and, optionally, a
+  corpus of serialized rich-text bodies for reference scanning.
+
+`host.listWorkspaceEntities(workspace)` aggregates every registered source with
+per-source failure isolation: a broken app degrades to missing entities and an
+entry in `failedSourceIds`, never a rejected index. Sources registered through
+a manifest are disposed with it; platform-level sources (for example people
+derived across apps with `collectEntityOwners()`) can be registered directly
+with `host.registerEntitySource()`.
+
+Entity identity for mentions defaults to the entity route. Sources set
+`mentionId` when several entities share a route, and
+`findEntityReferences()` scans the corpus for serialized mention nodes to
+answer "where is this referenced?". `filterWorkspaceEntities()` provides the
+shared ranking (title prefix > title substring > code substring) so mention
+popups behave identically in every app.
+
+Workspace entities complement — not replace — command-palette entities: a
+`CommandContribution` with `kind: "entity"` makes a record executable from the
+palette, while a workspace entity makes it referenceable from content.
+
+### Content Provenance
+
+`normalizeAiAttribution()` gives hosts one server-side normalization for
+"which AI produced this text" fields (null clears, strings trim and cap, other
+input reads as not-provided), and the React package renders the matching
+visible badge. The framework takes no position on when attribution is
+required; that is host product policy.
+
 ## React Runtime
 
 The React layer owns:
@@ -93,6 +133,8 @@ The React layer owns:
 - `ShellCommandPalette` for ranked commands, entity actions, child commands, and
   recent actions
 - `ShellPreferencesPanel` for inspecting and editing layered preferences
+- `ShareCodeChip` for the platform-wide click-to-copy short-link affordance
+- `AiAttributionBadge` for visible provenance on AI-produced text
 - hooks for context keys, command sources, preference inspection, and host state
 
 UI code uses Astryx components and StyleX `xstyle` rules. It does not use raw
@@ -109,6 +151,8 @@ The Worker helpers stay intentionally small:
 - D1 binding and prepared statement helpers
 - health response metadata
 - apex-domain redirects
+- short-code generation (opaque and read-aloud alphabets, unbiased sampling)
+- short-link routes that resolve `/d/<code>`-style paths to app routes
 
 Cloudflare APIs and limits change, so Worker-related changes should always be
 checked against current Cloudflare docs before implementation.

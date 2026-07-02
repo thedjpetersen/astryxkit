@@ -1,3 +1,4 @@
+export { mediaQueries } from "./media.stylex";
 export {
   AstryxKitProvider,
   astryxKitTheme,

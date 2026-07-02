@@ -1,4 +1,24 @@
 export {
+  buildWorkspaceEntityIndex,
+  collectEntityOwners,
+  entityMentionId,
+  filterWorkspaceEntities,
+  findEntityByMentionId,
+  findEntityReferences,
+  type WorkspaceEntityContribution,
+  type WorkspaceEntityCorpusEntry,
+  type WorkspaceEntityIndex,
+  type WorkspaceEntityKind,
+  type WorkspaceEntityQuery,
+  type WorkspaceEntityRef,
+  type WorkspaceEntitySource,
+} from "./entities";
+export {
+  AI_ATTRIBUTION_MAX_LENGTH,
+  normalizeAiAttribution,
+  type AiAttribution,
+} from "./provenance";
+export {
   ShellHost,
   createPlatformCommandSource,
   type ActiveShellApp,
@@ -11,6 +31,7 @@ export {
   type ShellFeatureContribution,
   type ShellHostOptions,
   type ShellPreferenceDefault,
+  type ShellSideNavMountContribution,
   type ShellTopNavMountArea,
   type ShellTopNavMountContribution,
   type WorkspaceContext,

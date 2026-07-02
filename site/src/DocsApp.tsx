@@ -388,7 +388,7 @@ import { createWorkerRouter, json } from "astryxkit/worker";`;
 
 const packageSurfaces: Surface[] = [
   {
-    body: "The framework boundary for app registration, activation, command routing, context keys, preferences, events, and import maps.",
+    body: "The framework boundary for app registration, activation, command routing, context keys, preferences, workspace entity sources, events, and import maps.",
     code: "astryxkit/core",
     eyebrow: "Runtime",
     href: "#/runtime/lifecycle",
@@ -396,7 +396,7 @@ const packageSurfaces: Surface[] = [
     title: "Shell runtime",
   },
   {
-    body: "The React integration for the shell frame, active app outlet, command palette, preferences panel, and host-state hooks.",
+    body: "The React integration for the shell frame, active app outlet, command palette, preferences panel, share-code chip, AI-attribution badge, and host-state hooks.",
     code: "astryxkit/react",
     eyebrow: "Interface",
     href: "#/runtime/react",
@@ -404,7 +404,7 @@ const packageSurfaces: Surface[] = [
     title: "React shell",
   },
   {
-    body: "The Astryx provider wrapper and appearance persistence layer. Use Astryx controls, then compose custom surfaces with StyleX.",
+    body: "The Astryx provider wrapper, appearance persistence, and shared media-query constants. Use Astryx controls, then compose custom surfaces with StyleX.",
     code: "astryxkit/design-system",
     eyebrow: "Design",
     href: "#/runtime/design-system",
@@ -412,7 +412,7 @@ const packageSurfaces: Surface[] = [
     title: "Design system",
   },
   {
-    body: "Small helpers for JSON responses, request parsing, route composition, asset fallback, health checks, and D1 access.",
+    body: "Small helpers for JSON responses, request parsing, route composition, short links, asset fallback, health checks, and D1 access.",
     code: "astryxkit/worker",
     eyebrow: "Edge",
     href: "#/reference/workers",
@@ -546,6 +546,13 @@ const manifestRows: SpecRow[] = [
     name: "features",
     tag: "context",
     tagVariant: "purple",
+  },
+  {
+    detail:
+      "Entity sources declare the app's referenceable records so mention popups and reference explorers span every app; the host aggregates them with per-source failure isolation.",
+    name: "entitySources",
+    tag: "extension",
+    tagVariant: "teal",
   },
 ];
 

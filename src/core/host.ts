@@ -1,5 +1,11 @@
 import type { ReactNode } from "react";
 import {
+  buildWorkspaceEntityIndex,
+  type WorkspaceEntityIndex,
+  type WorkspaceEntityKind,
+  type WorkspaceEntitySource,
+} from "./entities";
+import {
   DisposableStore,
   assertSingleShellInstance,
   shell,
@@ -46,6 +52,7 @@ export type ShellAppManifest = {
   route: string;
   commands: CommandContribution[];
   description?: string;
+  entitySources?: WorkspaceEntitySource[];
   features?: ShellFeatureContribution[];
   icon?: string;
   load: () => Promise<ShellAppModule>;
@@ -57,6 +64,13 @@ export type ShellTopNavMountArea = "header" | "start" | "center" | "end";
 
 export type ShellTopNavMountContribution = {
   area: ShellTopNavMountArea;
+  content: ReactNode;
+  id: string;
+  appId?: string;
+  order?: number;
+};
+
+export type ShellSideNavMountContribution = {
   content: ReactNode;
   id: string;
   appId?: string;
@@ -119,6 +133,14 @@ export class ShellHost implements Disposable {
   private readonly topNavMountsById = new Map<
     string,
     ShellTopNavMountContribution
+  >();
+  private readonly sideNavMountsById = new Map<
+    string,
+    ShellSideNavMountContribution
+  >();
+  private readonly entitySourcesById = new Map<
+    string,
+    WorkspaceEntitySource
   >();
   private version = 0;
 
@@ -186,6 +208,10 @@ export class ShellHost implements Disposable {
           preferenceDefault.ring,
         ),
       );
+    }
+
+    for (const entitySource of manifest.entitySources ?? []) {
+      store.add(this.registerEntitySource(entitySource));
     }
 
     this.emit();
@@ -271,7 +297,84 @@ export class ShellHost implements Disposable {
   topNavMounts(area?: ShellTopNavMountArea): ShellTopNavMountContribution[] {
     return Array.from(this.topNavMountsById.values())
       .filter((contribution) => area == null || contribution.area === area)
-      .sort(compareTopNavMounts);
+      .sort(compareNavMounts);
+  }
+
+  mountSideNav(contribution: ShellSideNavMountContribution): Disposable {
+    if (this.sideNavMountsById.has(contribution.id)) {
+      throw new Error(`Side nav mount already registered: ${contribution.id}`);
+    }
+
+    this.sideNavMountsById.set(contribution.id, contribution);
+    this.emit();
+
+    return {
+      dispose: () => {
+        if (!this.sideNavMountsById.has(contribution.id)) {
+          return;
+        }
+
+        this.sideNavMountsById.delete(contribution.id);
+        this.emit();
+      },
+    };
+  }
+
+  updateSideNavMount(contribution: ShellSideNavMountContribution) {
+    if (!this.sideNavMountsById.has(contribution.id)) {
+      throw new Error(`Unknown side nav mount: ${contribution.id}`);
+    }
+
+    this.sideNavMountsById.set(contribution.id, contribution);
+    this.emit();
+  }
+
+  sideNavMounts(): ShellSideNavMountContribution[] {
+    return Array.from(this.sideNavMountsById.values()).sort(compareNavMounts);
+  }
+
+  registerEntitySource(source: WorkspaceEntitySource): Disposable {
+    if (this.entitySourcesById.has(source.id)) {
+      throw new Error(`Entity source already registered: ${source.id}`);
+    }
+
+    this.entitySourcesById.set(source.id, source);
+    this.emit();
+
+    return {
+      dispose: () => {
+        if (!this.entitySourcesById.has(source.id)) {
+          return;
+        }
+
+        this.entitySourcesById.delete(source.id);
+        this.emit();
+      },
+    };
+  }
+
+  entitySources(): WorkspaceEntitySource[] {
+    return Array.from(this.entitySourcesById.values());
+  }
+
+  entityKinds(): WorkspaceEntityKind[] {
+    const kindsById = new Map<string, WorkspaceEntityKind>();
+
+    for (const source of this.entitySourcesById.values()) {
+      for (const kind of source.kinds) {
+        if (!kindsById.has(kind.id)) {
+          kindsById.set(kind.id, kind);
+        }
+      }
+    }
+
+    return Array.from(kindsById.values());
+  }
+
+  listWorkspaceEntities(
+    workspace: WorkspaceContext,
+  ): Promise<WorkspaceEntityIndex> {
+    return buildWorkspaceEntityIndex(this.entitySources(), { workspace });
   }
 
   activeApp(): ActiveShellApp | undefined {
@@ -361,6 +464,7 @@ export class ShellHost implements Disposable {
 
     current.store.dispose();
     this.deleteTopNavMountsForApp(current.manifest.id);
+    this.deleteSideNavMountsForApp(current.manifest.id);
     this.active = undefined;
     this.shellSdk.context.set("appActive", undefined);
     this.emit();
@@ -429,11 +533,19 @@ export class ShellHost implements Disposable {
       }
     }
   }
+
+  private deleteSideNavMountsForApp(appId: string) {
+    for (const contribution of this.sideNavMountsById.values()) {
+      if (contribution.appId === appId) {
+        this.sideNavMountsById.delete(contribution.id);
+      }
+    }
+  }
 }
 
-function compareTopNavMounts(
-  left: ShellTopNavMountContribution,
-  right: ShellTopNavMountContribution,
+function compareNavMounts(
+  left: { id: string; order?: number },
+  right: { id: string; order?: number },
 ) {
   const orderDiff = (left.order ?? 0) - (right.order ?? 0);
 
