@@ -34,12 +34,17 @@ export function AstryxKitProvider({
   );
   const resolvedAppearance = appearance ?? storedAppearance;
 
+  // When the host drives `appearance`, mirror it into local state so a
+  // later switch back to uncontrolled mode resumes from the same value
+  // instead of snapping to whatever storage last held.
   useEffect(() => {
     if (appearance) {
       setStoredAppearance(appearance);
     }
   }, [appearance]);
 
+  // Whatever won — prop or stored choice — gets persisted and announced,
+  // so the next page load and the host stay in agreement.
   useEffect(() => {
     writeStoredAppearance(resolvedAppearance, storageKey);
     onAppearanceChange?.(resolvedAppearance);

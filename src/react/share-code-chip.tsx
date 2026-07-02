@@ -10,6 +10,8 @@ import * as stylex from "@stylexjs/stylex";
 import type { StyleXStyles } from "@stylexjs/stylex";
 import { useEffect, useRef, useState } from "react";
 
+// Long enough to read "Copied", short enough that the chip is ready for
+// the next artifact before the user is.
 const COPIED_RESET_MS = 2000;
 
 const styles = stylex.create({

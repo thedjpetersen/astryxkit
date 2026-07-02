@@ -73,6 +73,9 @@ export function ShellPreferencesPanel({
     groups.find((group) => group.id === selectedGroupId) ?? preferredGroup;
   const groupsByRing = useMemo(() => groupSettingsByRing(groups), [groups]);
 
+  // The panel follows the user: when the active app changes, selection
+  // jumps to that app's settings — but only then. A group the user picked
+  // by hand stays put until the app context actually moves.
   useEffect(() => {
     if (groups.length === 0) {
       setSelectedGroupId("");
@@ -333,6 +336,9 @@ function PreferenceControl({
   );
 }
 
+// Text inputs hand back strings; numeric schemas coerce, and garbage falls
+// back to the schema default rather than throwing mid-keystroke — the
+// store's own validation stays the real gate.
 function parsePreferenceValue(
   schema: PreferenceSchema,
   value: string
@@ -356,6 +362,9 @@ function groupSettingsByRing(groups: SettingsGroup[]) {
     .filter((item) => item.groups.length > 0);
 }
 
+// The default selection walks from most relevant to most general: the
+// active app's app-ring group, any group the active app owns, then the
+// first app, product, or platform group the panel has.
 function preferredSettingsGroup(groups: SettingsGroup[], activeAppId?: string) {
   if (activeAppId) {
     const activeAppGroup = groups.find(

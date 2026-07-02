@@ -125,6 +125,10 @@ export type CommandPrefixMode = {
   prefix: string;
 };
 
+// Ranking output keeps its work visible: the scores, the matched character
+// ranges (for underlining), the prefix mode in effect, and which source
+// contributed the command. Palettes can render *why* something ranked, not
+// just the ordering.
 export type RankedCommandResult = {
   command: CommandContribution;
   isRecent: boolean;
@@ -154,6 +158,11 @@ export type PreferenceOption = {
   value: PreferenceValue;
 };
 
+// A preference exists only if a schema declares it: typed, namespaced
+// (`app.key`), carrying its own default, optional enum `options`, a `when`
+// visibility clause, and a `migrations` map for renaming stored values
+// across versions. Settings UI is generated from these — there is no
+// second registration step.
 export type PreferenceSchema = {
   key: string;
   appId: string;
@@ -187,6 +196,10 @@ export type PreferenceSource = {
   layer?: PreferenceValueLayer;
 };
 
+// The answer to "what is this preference right now, and why?" — value plus
+// provenance: which ring supplied it, whether it was inherited from a
+// wider ring, whether the user overrode it, and the per-ring `layers` so
+// an inspector can show the whole cascade at once.
 export type ResolvedPreference = {
   key: string;
   schema?: PreferenceSchema;
@@ -230,6 +243,9 @@ export type ShellSDKOptions = {
   platformId?: string;
 };
 
+// The whole SDK is these four services plus two identity strings. It is a
+// plain object on purpose — no class, no lifecycle of its own — because
+// its job is to be shared, and shared things should be boring.
 export type ShellSDK = {
   commands: CommandRegistry;
   context: ContextKeyService;
@@ -308,6 +324,8 @@ export class ContextKeyService {
       return;
     }
 
+    // `undefined` is the delete sentinel: a cleared key and a never-set key
+    // are indistinguishable, which is what `when` evaluation wants.
     if (value === undefined) {
       this.values.delete(key);
     } else {
@@ -362,13 +380,16 @@ export class ContextKeyService {
       return true;
     }
 
+    // `!key` negates truthiness…
     if (clause.startsWith("!")) {
       const key = clause.slice(1).trim();
       return !Boolean(this.values.get(key));
     }
 
+    // …`key == literal` / `key != literal` compare strictly…
     const match = clause.match(/^([A-Za-z0-9_.:-]+)\s*(==|!=)\s*(.+)$/);
 
+    // …and a bare key is a truthiness test. That is the entire grammar.
     if (!match) {
       return Boolean(this.values.get(clause));
     }
@@ -402,6 +423,10 @@ export class CommandRegistry {
 
   constructor(private readonly getShell: () => ShellSDK) {}
 
+  // Declaration makes a command searchable and rankable immediately.
+  // Duplicate ids throw rather than overwrite — two contributors fighting
+  // over one id is a bug worth surfacing at startup, not a race to
+  // register last.
   declare(command: CommandContribution): Disposable {
     const normalizedCommand = normalizeCommand(command);
 
@@ -457,6 +482,9 @@ export class CommandRegistry {
         store.add(this.bind(normalizedCommand.id, normalizedCommand.handler));
       }
 
+      // Children inherit identity from their parent and hide from the
+      // top-level palette unless they explicitly opt in — they surface by
+      // drilling into the parent.
       for (const child of normalizedCommand.children ?? []) {
         registerCommand(
           {
@@ -493,6 +521,10 @@ export class CommandRegistry {
     return disposable;
   }
 
+  // Binding attaches behavior to an already-declared command — the second
+  // half of declare/bind. The disposal guard (`get === handler`) means a
+  // stale disposer from a previous activation can never yank a newer
+  // binding out from under the current one.
   bind(commandId: string, handler: CommandHandler): Disposable {
     if (!this.commands.has(commandId)) {
       throw new Error(`Cannot bind unknown command: ${commandId}`);
@@ -539,6 +571,9 @@ export class CommandRegistry {
     return this.handlers.has(commandId);
   }
 
+  // Visibility is two gates: the static `paletteHidden` flag (children and
+  // internal commands) and the live `when` clause evaluated against
+  // context. Everything else about palette order is `compareCommands`.
   paletteItems(context: ContextKeyService): CommandContribution[] {
     return Array.from(this.commands.values())
       .filter(
@@ -565,6 +600,10 @@ export class CommandRegistry {
       return ranked;
     }
 
+    // Recents are re-resolved against the live registry on every read:
+    // history entries whose commands were disposed or whose `when` clauses
+    // now fail simply vanish, and duplicates collapse to their first
+    // (most recent) appearance.
     const recent = this.history
       .map((entry) => this.commands.get(entry.actionId))
       .filter((command): command is CommandContribution =>
@@ -588,6 +627,9 @@ export class CommandRegistry {
     return [...recent, ...ranked];
   }
 
+  // The drilled-in view: ranking scoped to one parent's children. Children
+  // are usually `paletteHidden`, so this is the only path that surfaces
+  // them.
   rankedChildItems(
     parentId: string,
     query: string,
@@ -631,11 +673,16 @@ export class CommandRegistry {
 
     let handler = this.handlers.get(commandId);
 
+    // No handler means the owning app has never activated. Ask the host to
+    // load it, then look once more — activation should have called `bind`.
     if (!handler && this.activator) {
       await this.activator(command);
       handler = this.handlers.get(commandId);
     }
 
+    // Still nothing is only an error for action commands; pure navigation
+    // commands legitimately have no handler and are executed by the host's
+    // navigate step instead.
     if (!handler && !command.route && !command.href) {
       throw new Error(`Command has no bound handler: ${commandId}`);
     }
@@ -644,6 +691,9 @@ export class CommandRegistry {
     this.recordHistory(command);
   }
 
+  // One activator, installed by `ShellHost` at construction: given an
+  // unbound command, load and activate the app that owns it. Registries
+  // without a host (tests, servers) simply have no lazy-activation path.
   setActivator(activator: CommandActivator): Disposable {
     this.activator = activator;
 
@@ -666,6 +716,8 @@ export class CommandRegistry {
     };
   }
 
+  // Plain counters for tests and support tooling — cheap to read, safe to
+  // log, and enough to answer "did disposal actually clean up?"
   debugSnapshot() {
     return {
       boundHandlers: this.handlers.size,
@@ -773,6 +825,9 @@ export function resolvePreference(
   platformId = defaultPlatformId,
 ): ResolvedPreference {
   const normalizedSchema = normalizePreferenceSchema(schema, platformId);
+
+  // Most specific ring first — a feature's stored value beats its app's,
+  // which beats the product's, which beats the platform's.
   const rings = [
     { ring: "feature", scope: context.feature },
     { ring: "app", scope: context.app },
@@ -811,6 +866,8 @@ export function resolvePreference(
     }
   }
 
+  // No ring spoke: the schema's own default answers, and the result says
+  // so honestly (`isDefault`) instead of pretending a ring supplied it.
   return {
     key: schema.key,
     schema,
@@ -906,6 +963,10 @@ export class PreferencesStore {
     };
   }
 
+  // `set` writes the user layer; passing `"user"` targets the schema's own
+  // ring, while naming a ring writes a user value at that ring instead.
+  // Validation runs before the write, so an enum can never store a value
+  // its options do not list.
   set(
     key: string,
     value: PreferenceValue,
@@ -927,6 +988,9 @@ export class PreferencesStore {
     this.emit();
   }
 
+  // Reset deletes only the user record — the seed value underneath (if
+  // any) becomes visible again. "Back to default" is really "back to
+  // whatever the rings say without me".
   reset(key: string, scope: Exclude<PreferenceScope, "default">) {
     const target = this.valueTargetForKey(
       key,
@@ -1006,6 +1070,9 @@ export class PreferencesStore {
     });
   }
 
+  // Settings UI is generated from declarations: schemas that pass their
+  // `when` clause are bucketed by `ring:scope:category`, and each bucket
+  // becomes one card in the preferences panel, settings alphabetized.
   settingsGroups(context: ContextKeyService): SettingsGroup[] {
     const groups = new Map<string, SettingsGroup>();
 
@@ -1087,6 +1154,9 @@ export class PreferencesStore {
     }
   }
 
+  // The inspector's cascade view: walk outermost-in (platform toward
+  // feature) collecting each ring's stored value, surfacing the user layer
+  // separately when it is the one that won.
   private layersForKey(
     key: string,
     context: RingContext,
@@ -1142,6 +1212,10 @@ export class PreferencesStore {
     };
   }
 
+  // The write-side type gate: enums check membership in `options`,
+  // everything else checks `typeof` against the declared type. Throwing
+  // here keeps bad values out of storage entirely instead of sanitizing
+  // them on the way back out.
   private validateValue(key: string, value: PreferenceValue) {
     const schema = this.schemas.get(key);
 
@@ -1348,6 +1422,8 @@ function normalizeCommand(command: CommandContribution): CommandContribution {
   };
 }
 
+// Shortcodes dedupe case-insensitively but keep their display casing —
+// `T00000A` and `#t00000a` are one code, shown the way the app wrote it.
 function normalizeShortcodes(
   shortcodes: string[] | undefined,
 ): string[] | undefined {
@@ -1373,6 +1449,9 @@ function normalizeShortcodeForMatch(shortcode: string): string {
   return shortcode.trim().replace(/^#/, "").toLowerCase();
 }
 
+// `platform` and `product` are reserved app ids that map straight to their
+// rings; every real app defaults to the `app` ring unless it says
+// otherwise.
 function defaultCommandRing(command: CommandContribution): CommandRing {
   if (command.appId === "platform") {
     return "platform";
@@ -1385,6 +1464,9 @@ function defaultCommandRing(command: CommandContribution): CommandRing {
   return "app";
 }
 
+// Kind inference follows the shape of the contribution: an `entity` makes
+// it an entity, a `route`/`href` makes it a page, and anything left is an
+// action. Kinds matter because the palette's prefix modes filter on them.
 function commandKind(command: CommandContribution): CommandKind {
   if (command.kind) {
     return command.kind;
@@ -1401,6 +1483,8 @@ function commandKind(command: CommandContribution): CommandKind {
   return "action";
 }
 
+// Splits a raw palette query into an optional sigil mode and the text to
+// match — `">dep"` becomes the Actions filter plus `"dep"`.
 function parseCommandQuery(query: string): {
   prefix?: CommandPrefixMode;
   query: string;
@@ -1468,6 +1552,8 @@ function fuzzyCommandMatch(
     };
   }
 
+  // Tier 1 — shortcodes. Typing a record id should feel like a jump, so an
+  // exact or prefix shortcode hit outranks every text match.
   const shortcodeScore = scoreShortcodeMatch(command, normalizedShortcodeQuery);
 
   if (shortcodeScore > 0) {
@@ -1477,6 +1563,8 @@ function fuzzyCommandMatch(
     };
   }
 
+  // Tier 2 — the query appears verbatim in the title; earlier is better,
+  // and the matched range comes back for underlining.
   const label = command.title;
   const labelLower = label.toLowerCase();
   const exactIndex = labelLower.indexOf(normalizedQuery);
@@ -1488,6 +1576,8 @@ function fuzzyCommandMatch(
     };
   }
 
+  // Tier 3 — some word in the title starts with the query ("cat" finding
+  // "Open Catalog").
   const wordStartIndex = labelLower
     .split(/\s+/)
     .findIndex((word) => word.startsWith(normalizedQuery));
@@ -1499,12 +1589,15 @@ function fuzzyCommandMatch(
     };
   }
 
+  // Tier 4 — scattered-but-ordered characters, weighted toward tight runs.
   const subsequence = scoreSubsequence(labelLower, normalizedQuery);
 
   if (subsequence.score > 0) {
     return subsequence;
   }
 
+  // Tier 5 — last resort: a substring hit anywhere in the id, category,
+  // description, keywords, or shortcodes.
   const keywordText = [
     command.id,
     command.appId,
@@ -1599,6 +1692,8 @@ function scoreSubsequence(
     ranges.push([index, index + 1]);
   }
 
+  // Every query character must have matched, in order, or it is no match
+  // at all.
   if (queryIndex !== query.length || firstMatch < 0) {
     return {
       ranges: [],
@@ -1606,12 +1701,20 @@ function scoreSubsequence(
     };
   }
 
+  // The formula in words: a base worth less than a word-start match, plus
+  // a bonus for the longest contiguous run, minus how far the match
+  // sprawls across the title.
   return {
     ranges,
     score: 450 + bestRun * 12 - (lastMatch - firstMatch),
   };
 }
 
+// Schemas may omit ring and scope; normalization derives them — a
+// `featureId` implies the feature ring, and `scopeForRing` picks the
+// storage scope (`platformId`, product id, `app.feature`, or the app id).
+// Stored records key on `ring:scope:key`, so this derivation *is* the
+// storage layout.
 function normalizePreferenceSchema(
   schema: PreferenceSchema,
   platformId: string,
@@ -1689,6 +1792,9 @@ function migratePreferenceValue(
   return schema.migrations[String(value)] ?? value;
 }
 
+// Right-hand sides of `when` comparisons coerce the way an author would
+// expect: quoted strings stay strings, `true`/`false`/`null` become
+// themselves, bare numbers become numbers, and anything else is a string.
 function parseContextLiteral(raw: string): ContextValue {
   const value = raw.trim();
 
@@ -1731,6 +1837,9 @@ function compareCommands(
   );
 }
 
+// Sort key order encodes the ranking philosophy: context specificity
+// (ring) beats text relevance, relevance beats declared priority, and an
+// alphabetical tiebreak keeps the list stable between renders.
 function compareRankedCommands(
   first: RankedCommandResult,
   second: RankedCommandResult,

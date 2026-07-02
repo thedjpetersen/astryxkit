@@ -94,6 +94,9 @@ export async function buildWorkspaceEntityIndex(
   };
 
   settled.forEach((result, position) => {
+    // A rejected source contributes exactly one thing: its id in the
+    // failure list. The index never rejects wholesale — one broken app
+    // should not take mentions down for everyone.
     if (result.status === "rejected") {
       index.failedSourceIds.push(sources[position].id);
       return;
@@ -101,6 +104,8 @@ export async function buildWorkspaceEntityIndex(
 
     const { contribution, source } = result.value;
 
+    // Spread order makes the source's `appId` a default, not a mandate —
+    // an entity that names its own app keeps it.
     for (const entity of contribution.entities) {
       index.entities.push({ appId: source.appId, ...entity });
     }
@@ -190,6 +195,9 @@ export function findEntityReferences(
   entity: WorkspaceEntityRef,
   corpus: WorkspaceEntityCorpusEntry[],
 ): WorkspaceEntityCorpusEntry[] {
+  // Matching the serialized attribute (`"id":"…"`) rather than the bare
+  // mention id keeps prose that merely quotes a route from counting as a
+  // reference — only real mention nodes carry that JSON shape.
   const needle = `"id":${JSON.stringify(entityMentionId(entity))}`;
 
   return corpus.filter(

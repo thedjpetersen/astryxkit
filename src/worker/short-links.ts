@@ -99,6 +99,8 @@ export function createShortLinkRoute<Env = unknown>({
     method: "GET",
     pathname: new RegExp(`^${escapeRegExp(prefix)}/(?<code>${codePattern})$`),
     handle: async (context) => {
+      // Codes travel in URLs, so they arrive percent-encoded; the resolver
+      // sees the human form.
       const target = await resolve(
         decodeURIComponent(context.params.code),
         context,
@@ -110,6 +112,9 @@ export function createShortLinkRoute<Env = unknown>({
           : jsonError("Short link not found", 404);
       }
 
+      // Resolvers return app routes ("/app/docs/d/…"); resolving against
+      // the request origin turns them into the absolute URL a redirect
+      // needs.
       return Response.redirect(
         new URL(target, context.url.origin).toString(),
         status,

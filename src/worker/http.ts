@@ -76,6 +76,10 @@ export async function readJsonObject(request: Request): Promise<JsonObject> {
   return isRecord(body) ? (body as JsonObject) : {};
 }
 
+// The pair encodes PATCH semantics: `getText` treats absent and blank as
+// "not provided" (`undefined`), while `getNullableText` lets an explicit
+// `null` through as "clear this field" — the same three-state contract
+// the AI-attribution helpers use.
 export function getText(body: JsonObject, key: string): string | undefined {
   const value = body[key];
 
@@ -92,6 +96,9 @@ export function getNullableText(body: JsonObject, key: string): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+// Canonical-host guard for the top of a fetch handler: requests to the
+// `www.` host 301 to the apex with path and query intact; anything else
+// returns null and the router proceeds normally.
 export function redirectToApex({
   apexHost,
   request,
@@ -197,6 +204,8 @@ function matchRoute<Env>(
     return null;
   }
 
+  // Named groups arrive under their names; unnamed groups are still
+  // reachable as "1", "2", … so quick regexes work without ceremony.
   return {
     ...(match.groups ?? {}),
     ...Object.fromEntries(

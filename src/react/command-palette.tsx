@@ -98,6 +98,10 @@ export function ShellCommandPalette({
     );
   }, [items.length]);
 
+  // Selection resolves to one of three intents: the synthetic back row
+  // pops the drill, a command with children pushes into it, and anything
+  // else closes the palette and runs. Query and cursor reset on every
+  // level change so each list starts fresh.
   function executeItem(item: ShellCommandItem | undefined) {
     if (!item) {
       return;
@@ -311,6 +315,9 @@ function buildCommandItems(
     .map((result) => commandToItem(result.command, result));
 }
 
+// The back row is a synthetic command that is never executed — `isBackItem`
+// short-circuits in `executeItem` — but shaping it like a command lets the
+// list render one item type with no special cases.
 function createBackItem(parent: CommandContribution): ShellCommandItem {
   const command: CommandContribution = {
     id: "platform.paletteBack",
@@ -348,6 +355,9 @@ function commandToItem(
   };
 }
 
+// Grouping preserves rank order twice over: groups appear in the order
+// their best item ranked, and items keep their order within each group —
+// no re-sorting sneaks in behind the ranking's back.
 function groupCommandItems(items: ShellCommandItem[]) {
   const groups: Array<{ label: string; items: ShellCommandItem[] }> = [];
 

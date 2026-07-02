@@ -62,6 +62,9 @@ export function ShellFrame({
     () => host.getManifestForPathname(currentPathname),
     [currentPathname, host, version]
   );
+  // A header mount is a takeover: the first one contributed replaces the
+  // brand block entirely (think a meeting app swapping in a room switcher);
+  // start/center/end mounts merely append alongside the host's own items.
   const topNavHeaderMounts = useShellTopNavMounts(host, "header");
   const topNavStartMounts = useShellTopNavMounts(host, "start");
   const topNavCenterMounts = useShellTopNavMounts(host, "center");

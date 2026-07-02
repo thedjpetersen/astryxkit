@@ -233,6 +233,9 @@ export function usePreferenceInspection(key: string, sdk: ShellSDK = shell()) {
   return useMemo(() => sdk.preferences.inspect(key), [key, sdk, version]);
 }
 
+// A live read of one context key; the third `useSyncExternalStore`
+// argument makes server renders see the fallback instead of touching the
+// browser-side store.
 export function useContextKey<TValue>(
   key: string,
   fallback: TValue,
@@ -278,6 +281,10 @@ export function ShellAppOutlet({
   useEffect(() => {
     let isCancelled = false;
 
+    // A failed activation rolls itself back — but only if this outlet is
+    // still the one asking. Deactivating *by id* means a rejection that
+    // lands after the user moved on can never evict the app that took the
+    // surface next.
     void host.activate(appId).catch(() => {
       if (!isCancelled) {
         host.deactivate(appId);

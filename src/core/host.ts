@@ -28,6 +28,10 @@ import {
   type ShellSDK,
 } from "./shell-sdk";
 
+// The two context objects every app render receives: which workspace the
+// user is in, and which route the shell matched to mount the app. Kept
+// deliberately thin — tenancy, membership, and permissions are host
+// product data, not shell data.
 export type WorkspaceContext = {
   name: string;
   slug: string;
@@ -38,6 +42,9 @@ export type MicroAppRoute = {
   slug: string;
 };
 
+// A feature is a named toggle bound to a context key: flipping it through
+// `setFeatureEnabled` re-evaluates every `when` clause that mentions the
+// key, so commands and preferences appear and disappear with the feature.
 export type ShellFeatureContribution = {
   id: string;
   label: string;
@@ -106,6 +113,10 @@ export type ShellAppInstance = Disposable & {
   render?: (props: ShellAppRenderProps) => ReactNode;
 };
 
+// What `manifest.load()` must resolve to: a module with one `activate`
+// function. Activation receives the host, the shared SDK, and
+// `disposeWithApp` — the hook that ties every handler and subscription the
+// app makes to its own lifetime.
 export type ShellAppModule = {
   activate: (
     context: ShellAppActivationContext,
@@ -160,6 +171,11 @@ export class ShellHost implements Disposable {
   >();
   private version = 0;
 
+  // Construction wires the host into the SDK: it installs itself as the
+  // command activator (lazy activation), re-emits on every service change
+  // so one subscription covers all shell state, captures the event types
+  // the product cares about into a newest-first feed, and contributes the
+  // default platform commands unless the host opts out.
   constructor(options: ShellHostOptions = {}) {
     this.shellSdk = options.shell ?? shell();
     if (!options.shell) {
@@ -272,6 +288,9 @@ export class ShellHost implements Disposable {
     return this.manifests.get(appId);
   }
 
+  // Route matching is exact-or-child-path (`/app/tasks` matches itself and
+  // `/app/tasks/T1`, never `/app/tasks2`) — enough for app-level routing;
+  // in-app routing belongs to the app.
   getManifestForPathname(pathname: string): ShellAppManifest | undefined {
     return Array.from(this.manifests.values()).find((manifest) =>
       isRouteMatch(manifest.route, pathname),
@@ -286,6 +305,9 @@ export class ShellHost implements Disposable {
     return this.shellSdk;
   }
 
+  // Mount/update/read make a tiny CRUD: register once, push fresh content
+  // on re-render, read sorted by `order` then id. The React hooks in
+  // `react-bindings` are thin wrappers over exactly these three calls.
   mountTopNav(contribution: ShellTopNavMountContribution): Disposable {
     if (this.topNavMountsById.has(contribution.id)) {
       throw new Error(`Top nav mount already registered: ${contribution.id}`);
@@ -406,6 +428,9 @@ export class ShellHost implements Disposable {
     return this.active;
   }
 
+  // The palette and settings methods are deliberate pass-throughs that
+  // supply the SDK's own context service — so UI code holds one object
+  // (the host) instead of threading context through every call.
   paletteItems(): CommandContribution[] {
     return this.shellSdk.commands.paletteItems(this.shellSdk.context);
   }
@@ -433,6 +458,9 @@ export class ShellHost implements Disposable {
     return this.shellSdk.preferences.settingsGroups(this.shellSdk.context);
   }
 
+  // The captured event feed, newest first — the raw material for activity
+  // panels and support diagnostics. Only the types named in
+  // `ShellHostOptions.eventTypes` are kept.
   events(): ShellEvent[] {
     return [...this.hostEvents];
   }
@@ -457,9 +485,14 @@ export class ShellHost implements Disposable {
       throw new Error(`Unknown micro-app: ${appId}`);
     }
 
+    // Surface handoff: evict the current occupant, then set `appActive`
+    // *before* the module resolves so `when` clauses flip while the code
+    // is still in flight.
     this.deactivate();
     this.shellSdk.context.set("appActive", manifest.id);
 
+    // The only place `load()` is ever called — everything before this line
+    // ran off manifest data alone.
     const store = new DisposableStore();
     const module = await manifest.load();
     const instance = await module.activate({
@@ -491,10 +524,14 @@ export class ShellHost implements Disposable {
       return;
     }
 
+    // Feature gates fall closed so no `when` clause keeps passing on the
+    // strength of an app that is no longer here…
     for (const feature of current.manifest.features ?? []) {
       this.shellSdk.context.set(feature.contextKey, false);
     }
 
+    // …then the app-scoped store drains (handlers, sources, subscriptions,
+    // the instance itself), and any chrome it projected is swept.
     current.store.dispose();
     this.deleteTopNavMountsForApp(current.manifest.id);
     this.deleteSideNavMountsForApp(current.manifest.id);
@@ -657,14 +694,19 @@ function defaultNavigate(href: string) {
 
   const url = new URL(href, window.location.origin);
 
+  // Leaving the origin means leaving the SPA — hand over to the browser.
   if (url.origin !== window.location.origin) {
     window.location.assign(url.toString());
     return;
   }
 
+  // Same-origin: push history and announce, so the host router re-renders
+  // without a page load.
   window.history.pushState(null, "", `${url.pathname}${url.search}${url.hash}`);
   window.dispatchEvent(new Event("astryxkit:navigate"));
 
+  // Fragment targets still deserve their scroll even though no real
+  // navigation happened.
   if (url.hash) {
     document.getElementById(url.hash.slice(1))?.scrollIntoView({
       block: "start",
