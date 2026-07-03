@@ -6,7 +6,7 @@
 // Apps declare entity sources on their manifests, and this module owns
 // the neutral model plus the aggregation that never learns any app's API.
 
-import type { WorkspaceContext } from "./host";
+import type { WorkspaceContext } from "./host.js";
 
 // Kinds are declared by sources, not enumerated by the framework — a
 // person, a task, a wiki page, and whatever the next app invents are all

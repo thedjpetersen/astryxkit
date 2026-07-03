@@ -1,8 +1,30 @@
 export {
+  DEFAULT_CSRF_COOKIE_NAME,
+  DEFAULT_CSRF_HEADER_NAME,
+  buildRateLimitTableSql,
+  constantTimeEqual,
+  createCapabilityGuard,
+  createD1RateLimiter,
+  generateCsrfToken,
+  issueCsrfCookie,
+  requireCapability,
+  verifyCsrf,
+  type CapabilityGuard,
+  type D1RateLimiter,
+  type D1RateLimiterOptions,
+  type EffectivePermissionResolver,
+  type IssueCsrfCookieOptions,
+  type RateLimitCheckOptions,
+  type RateLimitDefaults,
+  type RateLimitResult,
+  type RequireCapabilityInput,
+  type VerifyCsrfOptions,
+} from "./access-guard.js";
+export {
   prepareD1Statement,
   requireD1Database,
   runD1Batch,
-} from "./d1";
+} from "./d1.js";
 export {
   OPAQUE_CODE_ALPHABET,
   READABLE_CODE_ALPHABET,
@@ -12,7 +34,7 @@ export {
   type ReadableCodeOptions,
   type ShortCodeOptions,
   type ShortLinkRouteOptions,
-} from "./short-links";
+} from "./short-links.js";
 export {
   createHealthResponse,
   createWorkerRouter,
@@ -28,4 +50,4 @@ export {
   type WorkerRequestContext,
   type WorkerRoute,
   type WorkerRouterOptions,
-} from "./http";
+} from "./http.js";

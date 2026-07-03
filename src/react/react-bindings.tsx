@@ -22,13 +22,13 @@ import type {
   ShellHost,
   ShellTopNavMountArea,
   WorkspaceContext,
-} from "../core/host";
+} from "../core/host.js";
 import {
   shell,
   type CommandContribution,
   type CommandSourceContribution,
   type ShellSDK,
-} from "../core/shell-sdk";
+} from "../core/shell-sdk.js";
 
 export function useVisibleCommands(host: ShellHost): CommandContribution[] {
   const version = useHostVersion(host);

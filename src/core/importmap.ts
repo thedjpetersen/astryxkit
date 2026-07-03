@@ -5,7 +5,7 @@
 // app would bundle its own SDK, register commands into it, and the host
 // would never see them.
 
-import type { ShellAppManifest, ShellHost } from "./host";
+import type { ShellAppManifest, ShellHost } from "./host.js";
 
 export type ShellImportMap = {
   imports: Record<string, string>;

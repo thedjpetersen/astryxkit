@@ -16,13 +16,13 @@ import { TextInput } from "@astryxdesign/core/TextInput";
 import { VStack } from "@astryxdesign/core/VStack";
 import * as stylex from "@stylexjs/stylex";
 import { useEffect, useMemo, useState } from "react";
-import type { ShellHost } from "../core/host";
+import type { ShellHost } from "../core/host.js";
 import type {
   CommandContribution,
   CommandShortcut,
   RankedCommandResult,
-} from "../core/shell-sdk";
-import { useVisibleCommands } from "./react-bindings";
+} from "../core/shell-sdk.js";
+import { useVisibleCommands } from "./react-bindings.js";
 
 type ShellCommandItem = {
   command: CommandContribution;

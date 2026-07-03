@@ -22,7 +22,7 @@ can build on.
 | `astryxkit/core`          | Shell runtime: commands, context keys, events, app manifests, activation lifecycle, preferences, workspace entity sources, AI-attribution normalization, and import-map helpers. |
 | `astryxkit/react`         | React bindings, the Astryx shell frame, app outlet, command palette, preferences panel, share-code chip, and AI-attribution badge.                                               |
 | `astryxkit/design-system` | Default Astryx theme wrapper, appearance mode storage, and shared media-query constants.                                                                                         |
-| `astryxkit/worker`        | Small Cloudflare Workers HTTP, D1, and short-link helpers that keep API boundaries explicit.                                                                                     |
+| `astryxkit/worker`        | Small Cloudflare Workers HTTP, D1, short-link, capability-guard, CSRF, and rate-limit helpers that keep API boundaries explicit.                                                 |
 
 ## When To Use It
 
@@ -265,6 +265,21 @@ const router = createWorkerRouter<Env>({
   ],
 });
 ```
+
+The kit also ships a generic access-control primitive shared by all three
+layers. `astryxkit/core` provides the pure model and policy engine:
+`defineAccessControl()` turns a host's permission registry + role map into a
+model, `computeEffectivePermissions()` resolves `(role + grants) - denies`
+(denies win, unknown values are ignored), and `authorize()`/`can()` answer
+capability questions deny-by-default, including self-scoped permissions
+("edit your OWN comment"). `astryxkit/worker` enforces it at the boundary
+with `requireCapability()`/`createCapabilityGuard()` (401 vs 403), plus
+double-submit CSRF helpers (`generateCsrfToken`, `issueCsrfCookie`,
+`verifyCsrf`) and a fixed-window `createD1RateLimiter()` whose table the
+host migrates (`buildRateLimitTableSql`). `astryxkit/react` closes the loop
+with the headless `CapabilityProvider`/`useCan()` bindings and
+`usePermissionEditor()` for grant/deny override UIs. Permission strings,
+storage, and business rules stay in the host product.
 
 - Workers docs: https://developers.cloudflare.com/workers/
 - Workers limits: https://developers.cloudflare.com/workers/platform/limits/

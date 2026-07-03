@@ -11,7 +11,7 @@ import {
   type WorkspaceEntityIndex,
   type WorkspaceEntityKind,
   type WorkspaceEntitySource,
-} from "./entities";
+} from "./entities.js";
 import {
   DisposableStore,
   assertSingleShellInstance,
@@ -26,7 +26,7 @@ import {
   type SettingsGroup,
   type ShellEvent,
   type ShellSDK,
-} from "./shell-sdk";
+} from "./shell-sdk.js";
 
 // The two context objects every app render receives: which workspace the
 // user is in, and which route the shell matched to mount the app. Kept

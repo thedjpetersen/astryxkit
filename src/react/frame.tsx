@@ -15,9 +15,9 @@ import {
 } from "@astryxdesign/core/SideNav";
 import { TopNav, TopNavHeading, TopNavItem } from "@astryxdesign/core/TopNav";
 import { Fragment, useMemo, useState, type ReactNode } from "react";
-import type { ShellHost, WorkspaceContext } from "../core/host";
-import { ShellCommandPalette } from "./command-palette";
-import { useHostVersion, useShellTopNavMounts } from "./react-bindings";
+import type { ShellHost, WorkspaceContext } from "../core/host.js";
+import { ShellCommandPalette } from "./command-palette.js";
+import { useHostVersion, useShellTopNavMounts } from "./react-bindings.js";
 
 export type ShellNavItem = {
   href: string;

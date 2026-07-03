@@ -1,4 +1,25 @@
 export {
+  authorize,
+  can,
+  computeEffectivePermissions,
+  defineAccessControl,
+  isPermission,
+  listPermissionGroups,
+  listPermissions,
+  partitionPermissionGrants,
+  roleAtLeast,
+  type AccessControlDefinition,
+  type AccessControlModel,
+  type AuthorizeOptions,
+  type AuthorizeResult,
+  type EffectivePermissionInput,
+  type Permission,
+  type PermissionGrant,
+  type PermissionGroup,
+  type PermissionMeta,
+  type Role,
+} from "./access-control.js";
+export {
   buildWorkspaceEntityIndex,
   collectEntityOwners,
   entityMentionId,
@@ -12,12 +33,12 @@ export {
   type WorkspaceEntityQuery,
   type WorkspaceEntityRef,
   type WorkspaceEntitySource,
-} from "./entities";
+} from "./entities.js";
 export {
   AI_ATTRIBUTION_MAX_LENGTH,
   normalizeAiAttribution,
   type AiAttribution,
-} from "./provenance";
+} from "./provenance.js";
 export {
   ShellHost,
   createPlatformCommandSource,
@@ -35,7 +56,7 @@ export {
   type ShellTopNavMountArea,
   type ShellTopNavMountContribution,
   type WorkspaceContext,
-} from "./host";
+} from "./host.js";
 export {
   buildImportMapFromHost,
   buildShellImportMap,
@@ -43,7 +64,7 @@ export {
   sharedImportPins,
   shellImportMapId,
   type ShellImportMap,
-} from "./importmap";
+} from "./importmap.js";
 export {
   CommandRegistry,
   ContextKeyService,
@@ -87,4 +108,4 @@ export {
   type ShellEvent,
   type ShellSDK,
   type ShellSDKOptions,
-} from "./shell-sdk";
+} from "./shell-sdk.js";

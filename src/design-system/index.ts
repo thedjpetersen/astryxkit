@@ -1,4 +1,4 @@
-export { mediaQueries } from "./media.stylex";
+export { mediaQueries } from "./media.stylex.js";
 export {
   AstryxKitProvider,
   astryxKitTheme,
@@ -8,4 +8,4 @@ export {
   writeStoredAppearance,
   type AppearanceMode,
   type DefinedTheme,
-} from "./theme";
+} from "./theme.js";

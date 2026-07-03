@@ -1,14 +1,26 @@
 export {
   AiAttributionBadge,
   type AiAttributionBadgeProps,
-} from "./ai-attribution";
-export { ShellCommandPalette } from "./command-palette";
+} from "./ai-attribution.js";
+export {
+  CapabilityProvider,
+  useCan,
+  useCapabilities,
+  usePermissionEditor,
+  type CapabilityProviderProps,
+  type PermissionEditor,
+  type PermissionEditorGroup,
+  type PermissionEditorOptions,
+  type PermissionEditorRow,
+  type PermissionOverrideState,
+} from "./capabilities.js";
+export { ShellCommandPalette } from "./command-palette.js";
 export {
   ShareCodeChip,
   type ShareCodeChipProps,
-} from "./share-code-chip";
-export { ShellFrame, type ShellFrameProps, type ShellNavItem } from "./frame";
-export { ShellPreferencesPanel } from "./preferences";
+} from "./share-code-chip.js";
+export { ShellFrame, type ShellFrameProps, type ShellNavItem } from "./frame.js";
+export { ShellPreferencesPanel } from "./preferences.js";
 export {
   ShellAppOutlet,
   useCommandSource,
@@ -23,4 +35,4 @@ export {
   useShellTopNavMount,
   useShellTopNavMounts,
   useVisibleCommands,
-} from "./react-bindings";
+} from "./react-bindings.js";

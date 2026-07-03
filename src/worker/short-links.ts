@@ -8,7 +8,7 @@ import {
   jsonError,
   type WorkerRequestContext,
   type WorkerRoute,
-} from "./http";
+} from "./http.js";
 
 /** Opaque share codes: unambiguous in URLs, screams "identifier". */
 export const OPAQUE_CODE_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";

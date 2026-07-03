@@ -21,15 +21,15 @@ import { TextInput } from "@astryxdesign/core/TextInput";
 import { VStack } from "@astryxdesign/core/VStack";
 import * as stylex from "@stylexjs/stylex";
 import { useEffect, useMemo, useState } from "react";
-import type { ShellHost } from "../core/host";
+import type { ShellHost } from "../core/host.js";
 import type {
   PreferenceRing,
   PreferenceSchema,
   PreferenceScope,
   PreferenceValue,
   SettingsGroup,
-} from "../core/shell-sdk";
-import { usePreferenceInspection, useSettingsGroups } from "./react-bindings";
+} from "../core/shell-sdk.js";
+import { usePreferenceInspection, useSettingsGroups } from "./react-bindings.js";
 
 const styles = stylex.create({
   contentHeader: {
