@@ -63,14 +63,14 @@
     "validate": "npm run check && npm run test && npm run build && npm run docs:build"
   },
   "peerDependencies": {
-    "@astryxdesign/core": "^0.1.2",
+    "@astryxdesign/core": "^0.1.4",
     "@stylexjs/stylex": "^0.18.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@astryxdesign/cli": "^0.1.2",
-    "@astryxdesign/core": "^0.1.2",
+    "@astryxdesign/cli": "^0.1.4",
+    "@astryxdesign/core": "^0.1.4",
     "@cloudflare/workers-types": "^4.20260624.1",
     "@playwright/test": "^1.61.1",
     "@stylexjs/babel-plugin": "^0.18.3",
