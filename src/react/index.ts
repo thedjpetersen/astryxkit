@@ -22,7 +22,9 @@ export {
 export { ShellFrame, type ShellFrameProps, type ShellNavItem } from "./frame.js";
 export { ShellPreferencesPanel } from "./preferences.js";
 export {
+  ShellAppErrorBoundary,
   ShellAppOutlet,
+  type ShellAppErrorBoundaryProps,
   useCommandSource,
   useContextKey,
   useEntityActions,

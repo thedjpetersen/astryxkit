@@ -5,19 +5,23 @@
 // of the command list living in component state.
 
 import { Badge } from "@astryxdesign/core/Badge";
+import { Button } from "@astryxdesign/core/Button";
 import { Card } from "@astryxdesign/core/Card";
 import { Heading } from "@astryxdesign/core/Heading";
 import { HStack } from "@astryxdesign/core/HStack";
 import { Text } from "@astryxdesign/core/Text";
 import { VStack } from "@astryxdesign/core/VStack";
 import {
+  Component,
   useEffect,
   useMemo,
   useSyncExternalStore,
+  type ErrorInfo,
   type ReactNode,
 } from "react";
 import type {
   MicroAppRoute,
+  ShellAppInstance,
   ShellAppRenderProps,
   ShellHost,
   ShellTopNavMountArea,
@@ -252,6 +256,121 @@ export function useContextKey<TValue>(
   );
 }
 
+export type ShellAppErrorBoundaryProps = {
+  appId: string;
+  appName: string;
+  children: ReactNode;
+  ownerTeam?: string;
+  resetKey: string;
+  onError?: (error: unknown, info: ErrorInfo) => void;
+};
+
+type ShellAppErrorBoundaryState = {
+  error: Error | null;
+  resetKey: string;
+};
+
+export class ShellAppErrorBoundary extends Component<
+  ShellAppErrorBoundaryProps,
+  ShellAppErrorBoundaryState
+> {
+  state: ShellAppErrorBoundaryState = {
+    error: null,
+    resetKey: this.props.resetKey,
+  };
+
+  static getDerivedStateFromError(error: unknown) {
+    return { error: normalizeError(error) };
+  }
+
+  static getDerivedStateFromProps(
+    props: ShellAppErrorBoundaryProps,
+    state: ShellAppErrorBoundaryState
+  ) {
+    if (props.resetKey !== state.resetKey) {
+      return { error: null, resetKey: props.resetKey };
+    }
+
+    return null;
+  }
+
+  componentDidCatch(error: unknown, info: ErrorInfo) {
+    this.props.onError?.(error, info);
+
+    if (!this.props.onError) {
+      console.error(`Shell app "${this.props.appId}" failed to render.`, error, {
+        componentStack: info.componentStack,
+      });
+    }
+  }
+
+  render() {
+    if (this.state.error != null) {
+      return (
+        <ShellAppErrorFallback
+          appName={this.props.appName}
+          error={this.state.error}
+          ownerTeam={this.props.ownerTeam}
+          onRetry={() => this.setState({ error: null })}
+        />
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+function ShellAppErrorFallback({
+  appName,
+  error,
+  ownerTeam,
+  onRetry,
+}: {
+  appName: string;
+  error: Error;
+  ownerTeam?: string;
+  onRetry: () => void;
+}) {
+  return (
+    <Card padding={5} variant="muted">
+      <VStack gap={3}>
+        <HStack justify="between" align="center" gap={3} wrap="wrap">
+          <VStack gap={0}>
+            <Heading level={2}>{appName} failed to render</Heading>
+            {ownerTeam ? <Text type="supporting">{ownerTeam}</Text> : null}
+          </VStack>
+          <Badge label="Render error" variant="error" />
+        </HStack>
+        <Text type="supporting">
+          The app surface crashed. The rest of the shell is still available.
+        </Text>
+        {error.message ? (
+          <Text type="code" maxLines={2}>
+            {error.message}
+          </Text>
+        ) : null}
+        <HStack gap={2}>
+          <Button label="Retry app" variant="primary" size="sm" onClick={onRetry} />
+        </HStack>
+      </VStack>
+    </Card>
+  );
+}
+
+function ShellAppRenderSurface({
+  instance,
+  renderProps,
+}: {
+  instance: ShellAppInstance;
+  renderProps: ShellAppRenderProps;
+}) {
+  return instance.render ? instance.render(renderProps) : null;
+}
+
+function normalizeError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
 // The outlet is where routes become running apps: mount activates, unmount
 // deactivates, and the two placeholder cards cover the in-between states
 // (unregistered manifest, module still loading). The `isCancelled` flag
@@ -338,5 +457,17 @@ export function ShellAppOutlet({
     workspace,
   };
 
-  return activeApp.instance.render ? activeApp.instance.render(renderProps) : null;
+  return (
+    <ShellAppErrorBoundary
+      appId={manifest.id}
+      appName={manifest.name}
+      ownerTeam={manifest.ownerTeam}
+      resetKey={`${manifest.id}:${route.pathname}`}
+    >
+      <ShellAppRenderSurface
+        instance={activeApp.instance}
+        renderProps={renderProps}
+      />
+    </ShellAppErrorBoundary>
+  );
 }
