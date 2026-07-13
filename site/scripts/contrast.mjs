@@ -7,7 +7,15 @@ const viteBin = fileURLToPath(
   new URL("../../node_modules/vite/bin/vite.js", import.meta.url),
 );
 const previewUrl = "http://127.0.0.1:4175/astryxkit/";
-const routes = ["overview", "quickstart", "runtime", "build", "reference", "source"];
+const routes = [
+  "overview",
+  "motivation",
+  "quickstart",
+  "runtime",
+  "build",
+  "reference",
+  "source",
+];
 const colorSchemes = ["light", "dark"];
 
 const preview = spawn(

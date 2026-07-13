@@ -78,6 +78,7 @@ type DocsSectionGroup =
   | "Start";
 type DocsPageId =
   | "build"
+  | "motivation"
   | "overview"
   | "quickstart"
   | "reference"
@@ -762,7 +763,7 @@ const docsSections: DocsSection[] = [
     icon: "checkDouble",
     id: "motivation",
     label: "Motivation",
-    pageId: "overview",
+    pageId: "motivation",
     summary:
       "How bounded apps and framework layers constrain compounding LLM mistakes.",
   },
@@ -1031,6 +1032,7 @@ const docsSectionGroups: Array<{
 
 const topNavigationItems: TopNavigationItem[] = [
   { href: "#/overview", label: "Overview", pageId: "overview" },
+  { href: "#/motivation", label: "Motivation", pageId: "motivation" },
   { href: "#/quickstart", label: "Quickstart", pageId: "quickstart" },
   { href: "#/runtime", label: "Runtime", pageId: "runtime" },
   { href: "#/build", label: "Build", pageId: "build" },
@@ -1045,7 +1047,11 @@ const docsSectionById = new Map<string, DocsSection>(
 const docsPages: Record<DocsPageId, { label: string; sectionIds: string[] }> = {
   overview: {
     label: "Overview",
-    sectionIds: ["overview", "motivation", "framework-map", "architecture"],
+    sectionIds: ["overview", "framework-map", "architecture"],
+  },
+  motivation: {
+    label: "Motivation",
+    sectionIds: ["motivation"],
   },
   quickstart: {
     label: "Quickstart",
@@ -4275,11 +4281,12 @@ function DocsPage({
       return (
         <>
           <DocsHero />
-          <Motivation />
           <FrameworkMap />
           <ArchitectureModel />
         </>
       );
+    case "motivation":
+      return <Motivation />;
     case "quickstart":
       return (
         <>
