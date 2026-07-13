@@ -109,21 +109,38 @@ function auditContrast() {
     ];
   };
 
-  const effectiveBackground = (element) => {
-    const ancestors = [];
+  const styleCache = new WeakMap();
+  const styleFor = (element) => {
+    const cached = styleCache.get(element);
 
-    for (let current = element; current; current = current.parentElement) {
-      ancestors.unshift(current);
+    if (cached) {
+      return cached;
     }
 
-    return ancestors.reduce(
-      (background, ancestor) =>
-        composite(
-          parseColor(getComputedStyle(ancestor).backgroundColor),
-          background,
-        ),
-      [255, 255, 255, 1],
+    const style = getComputedStyle(element);
+    styleCache.set(element, style);
+    return style;
+  };
+
+  const backgroundCache = new WeakMap();
+
+  const effectiveBackground = (element) => {
+    const cached = backgroundCache.get(element);
+
+    if (cached) {
+      return cached;
+    }
+
+    const parentBackground = element.parentElement
+      ? effectiveBackground(element.parentElement)
+      : [255, 255, 255, 1];
+    const background = composite(
+      parseColor(styleFor(element).backgroundColor),
+      parentBackground,
     );
+
+    backgroundCache.set(element, background);
+    return background;
   };
 
   const luminance = (color) => {
@@ -152,7 +169,7 @@ function auditContrast() {
 
   return Array.from(document.querySelectorAll("body *"))
     .filter((element) => {
-      const style = getComputedStyle(element);
+      const style = styleFor(element);
       const hasDirectText = Array.from(element.childNodes).some(
         (node) =>
           node.nodeType === Node.TEXT_NODE && Boolean(node.textContent?.trim()),
@@ -167,7 +184,7 @@ function auditContrast() {
       );
     })
     .map((element) => {
-      const style = getComputedStyle(element);
+      const style = styleFor(element);
       const background = effectiveBackground(element);
       const foreground = composite(parseColor(style.color), background);
       const fontSize = Number.parseFloat(style.fontSize);
