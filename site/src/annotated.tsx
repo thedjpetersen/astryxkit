@@ -1,6 +1,7 @@
 import { Badge, Code, Heading, Link, Text } from "@astryxdesign/core";
 import {
   borderVars,
+  colorVars,
   radiusVars,
   spacingVars,
 } from "@astryxdesign/core/theme/tokens.stylex";
@@ -219,11 +220,11 @@ const ANNOTATION_BREAK = "@media (min-width: 1100px)";
 
 const styles = stylex.create({
   page: {
-    backgroundColor: "#fff",
+    backgroundColor: colorVars["--color-background-surface"],
     scrollMarginTop: `calc(${spacingVars["--spacing-12"]} + ${spacingVars["--spacing-8"]})`,
   },
   header: {
-    borderBottomColor: "#e3e8ee",
+    borderBottomColor: colorVars["--color-border"],
     borderBottomStyle: "solid",
     borderBottomWidth: borderVars["--border-width"],
     paddingBlock: spacingVars["--spacing-8"],
@@ -260,14 +261,14 @@ const styles = stylex.create({
   },
   symbolChip: {
     backgroundColor: {
-      default: "#f6f8fa",
-      ":hover": "#e8edf3",
+      default: colorVars["--color-background-muted"],
+      ":hover": colorVars["--color-overlay-hover"],
     },
-    borderColor: "#e3e8ee",
+    borderColor: colorVars["--color-border"],
     borderRadius: radiusVars["--radius-full"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
-    color: "#3c4257",
+    color: colorVars["--color-text-primary"],
     fontFamily: "var(--font-family-code)",
     fontSize: "12px",
     paddingBlock: "2px",
@@ -292,7 +293,7 @@ const styles = stylex.create({
     scrollMarginTop: `calc(${spacingVars["--spacing-12"]} + ${spacingVars["--spacing-8"]})`,
   },
   annotationCell: {
-    borderBottomColor: "#eef1f5",
+    borderBottomColor: colorVars["--color-border"],
     borderBottomStyle: "solid",
     borderBottomWidth: borderVars["--border-width"],
     display: "grid",
@@ -313,7 +314,7 @@ const styles = stylex.create({
   },
   footer: {
     alignItems: "center",
-    borderTopColor: "#e3e8ee",
+    borderTopColor: colorVars["--color-border"],
     borderTopStyle: "solid",
     borderTopWidth: borderVars["--border-width"],
     display: "flex",
