@@ -759,6 +759,15 @@ const docsSections: DocsSection[] = [
   },
   {
     group: "Start",
+    icon: "checkDouble",
+    id: "motivation",
+    label: "Motivation",
+    pageId: "overview",
+    summary:
+      "How bounded apps and framework layers constrain compounding LLM mistakes.",
+  },
+  {
+    group: "Start",
     icon: "copy",
     id: "install",
     label: "Install",
@@ -982,7 +991,7 @@ const docsSectionGroups: Array<{
 }> = [
   {
     title: "Start",
-    ids: ["overview", "install", "quickstart", "project-layout"],
+    ids: ["overview", "motivation", "install", "quickstart", "project-layout"],
   },
   {
     title: "Concepts",
@@ -1036,7 +1045,7 @@ const docsSectionById = new Map<string, DocsSection>(
 const docsPages: Record<DocsPageId, { label: string; sectionIds: string[] }> = {
   overview: {
     label: "Overview",
-    sectionIds: ["overview", "framework-map", "architecture"],
+    sectionIds: ["overview", "motivation", "framework-map", "architecture"],
   },
   quickstart: {
     label: "Quickstart",
@@ -2334,6 +2343,57 @@ function FrameworkMap() {
         {packageSurfaces.map((surface) => (
           <SurfacePanel key={surface.title} surface={surface} />
         ))}
+      </section>
+    </Band>
+  );
+}
+
+function Motivation() {
+  return (
+    <Band id="motivation" muted>
+      <section {...stylex.props(styles.referenceSplit)}>
+        <section {...stylex.props(styles.copyBlock)}>
+          <SectionHeader
+            badge="Motivation"
+            title="Constrain the decision surface for LLM-assisted development."
+          >
+            LLM-assisted development has a compounding-error problem. As a
+            model makes decisions across more dependent layers, small mistakes
+            propagate and reliability can degrade with a power-law-like shape.
+          </SectionHeader>
+          <section {...stylex.props(styles.notePanel)}>
+            <VStack gap={3}>
+              <Text as="p" display="block" color="secondary">
+                Encapsulation, domain-driven boundaries, and package-by-feature
+                reduce that blast radius. Each app can evolve independently
+                while the shell supplies shared contracts and APIs.
+              </Text>
+              <Text as="p" display="block" color="secondary">
+                The goal is disposable leverage: bootstrap quickly,
+                collaborate through stable seams, and throw an app away without
+                throwing away the platform.
+              </Text>
+            </VStack>
+          </section>
+        </section>
+        <ol {...stylex.props(styles.layerStack)}>
+          <Layer
+            label="Framework layers"
+            body="Encode stable infrastructure, design-system, runtime, and tooling decisions once instead of asking every model or app to choose them again."
+          />
+          <Layer
+            label="Shared contracts"
+            body="Give independently developed apps the same APIs for registration, commands, preferences, entities, events, and shell behavior."
+          />
+          <Layer
+            label="Domain packages"
+            body="Organize by business capability, keep domain language local, and contain a mistaken assumption inside one feature boundary."
+          />
+          <Layer
+            label="Business implementation"
+            body="Leave the model a smaller, higher-value choice surface: product behavior and the local implementation needed to deliver it."
+          />
+        </ol>
       </section>
     </Band>
   );
@@ -4217,6 +4277,7 @@ function DocsPage({
       return (
         <>
           <DocsHero />
+          <Motivation />
           <FrameworkMap />
           <ArchitectureModel />
         </>
