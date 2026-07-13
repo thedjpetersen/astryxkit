@@ -2351,49 +2351,47 @@ function FrameworkMap() {
 function Motivation() {
   return (
     <Band id="motivation" muted>
-      <section {...stylex.props(styles.referenceSplit)}>
-        <section {...stylex.props(styles.copyBlock)}>
-          <SectionHeader
-            badge="Motivation"
-            title="Constrain the decision surface for LLM-assisted development."
-          >
-            LLM-assisted development has a compounding-error problem. As a
-            model makes decisions across more dependent layers, small mistakes
-            propagate and reliability can degrade with a power-law-like shape.
-          </SectionHeader>
-          <section {...stylex.props(styles.notePanel)}>
-            <VStack gap={3}>
-              <Text as="p" display="block" color="secondary">
-                Encapsulation, domain-driven boundaries, and package-by-feature
-                reduce that blast radius. Each app can evolve independently
-                while the shell supplies shared contracts and APIs.
-              </Text>
-              <Text as="p" display="block" color="secondary">
-                The goal is disposable leverage: bootstrap quickly,
-                collaborate through stable seams, and throw an app away without
-                throwing away the platform.
-              </Text>
-            </VStack>
-          </section>
-        </section>
-        <ol {...stylex.props(styles.layerStack)}>
-          <Layer
-            label="Framework layers"
-            body="Encode stable infrastructure, design-system, runtime, and tooling decisions once instead of asking every model or app to choose them again."
-          />
-          <Layer
-            label="Shared contracts"
-            body="Give independently developed apps the same APIs for registration, commands, preferences, entities, events, and shell behavior."
-          />
-          <Layer
-            label="Domain packages"
-            body="Organize by business capability, keep domain language local, and contain a mistaken assumption inside one feature boundary."
-          />
-          <Layer
-            label="Business implementation"
-            body="Leave the model a smaller, higher-value choice surface: product behavior and the local implementation needed to deliver it."
-          />
-        </ol>
+      <section {...stylex.props(styles.motivationProse)}>
+        <SectionHeader
+          badge="Motivation"
+          title="Make the platform durable and the apps disposable."
+        >
+          LLM-assisted development gets less reliable as decisions accumulate.
+          A small mistake in infrastructure, state, or an API becomes context
+          for the next decision, so errors compound with a power-law-like
+          shape.
+        </SectionHeader>
+        <VStack gap={4}>
+          <Text as="p" display="block" color="secondary">
+            AstryxKit narrows that chain of decisions. Framework layers settle
+            recurring choices about runtime, shell behavior, the design system,
+            commands, preferences, and Worker boundaries before an app asks a
+            model to build anything.
+          </Text>
+          <Text as="p" display="block" color="secondary">
+            Inside those rails, domain-driven design and package-by-feature
+            keep each business capability encapsulated. A mistaken assumption
+            stays local instead of leaking through a shared technical layer and
+            reshaping every app.
+          </Text>
+          <Text as="p" display="block" color="secondary">
+            Apps can then be developed independently while collaborating through
+            stable contracts and APIs. Teams and models share the seams, not the
+            implementation, so parallel work does not require a shared pile of
+            internal state.
+          </Text>
+          <Text as="p" display="block" color="secondary">
+            The payoff is disposable leverage. We can bootstrap an app quickly,
+            collaborate on it, learn from it, and throw it away without throwing
+            away the platform that made it possible.
+          </Text>
+          <Text as="p" display="block" color="secondary">
+            Each framework layer removes choices from the layer below. By the
+            time an LLM reaches product code, its responsibility is intentionally
+            small: understand the domain, choose the business behavior, and
+            implement it.
+          </Text>
+        </VStack>
       </section>
     </Band>
   );
@@ -4557,6 +4555,13 @@ const styles = stylex.create({
     gap: spacingVars["--spacing-3"],
     justifyItems: "start",
     maxWidth: 760,
+  },
+  motivationProse: {
+    display: "grid",
+    gap: spacingVars["--spacing-6"],
+    marginInline: "auto",
+    maxWidth: 760,
+    width: "100%",
   },
   installStrip: {
     alignItems: "start",
