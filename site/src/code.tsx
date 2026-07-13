@@ -360,10 +360,10 @@ const CODE_BACKGROUND = "#1a2652";
 const CODE_HEADER_BACKGROUND = "#142046";
 
 const paletteStyles = stylex.create({
-  comment: { color: "#8b949e", fontStyle: "italic" },
+  comment: { color: "#b5bdc8", fontStyle: "italic" },
   constant: { color: "#79c0ff" },
   function: { color: "#d2a8ff" },
-  keyword: { color: "#ff7b72" },
+  keyword: { color: "#ff9b91" },
   number: { color: "#79c0ff" },
   plain: { color: "#c9d1d9" },
   property: { color: "#79c0ff" },
@@ -445,7 +445,7 @@ const styles = stylex.create({
     boxShadow: "inset 2px 0 0 #79c0ff",
   },
   lineNumber: {
-    color: "rgba(230, 237, 243, 0.35)",
+    color: "rgba(230, 237, 243, 0.65)",
     minWidth: "2.75em",
     paddingInlineEnd: spacingVars["--spacing-3"],
     textAlign: "right",

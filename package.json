@@ -55,12 +55,13 @@
     "build": "tsc -p tsconfig.build.json",
     "check": "tsc --noEmit",
     "docs:build": "vite build --config site/vite.config.ts",
+    "docs:contrast": "node site/scripts/contrast.mjs",
     "docs:dev": "vite --config site/vite.config.ts --host 127.0.0.1",
     "docs:preview": "vite preview --config site/vite.config.ts --host 127.0.0.1",
     "docs:screenshot": "node site/scripts/screenshot.mjs",
     "prepare": "npm run build",
     "test": "vitest run",
-    "validate": "npm run check && npm run test && npm run build && npm run docs:build"
+    "validate": "npm run check && npm run test && npm run build && npm run docs:build && npm run docs:contrast"
   },
   "peerDependencies": {
     "@astryxdesign/core": "^0.1.4",

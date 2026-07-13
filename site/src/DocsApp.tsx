@@ -19,6 +19,7 @@ import {
   type BadgeVariant,
   type IconName,
 } from "@astryxdesign/core";
+import { defineTheme } from "@astryxdesign/core/theme";
 import {
   borderVars,
   colorVars,
@@ -43,7 +44,7 @@ import {
   type PreferenceRing,
   type PreferenceSchema,
 } from "../../src/core";
-import { AstryxKitProvider } from "../../src/design-system";
+import { AstryxKitProvider, astryxKitTheme } from "../../src/design-system";
 import { AnnotatedSource } from "./annotated";
 import { CodeListing, type CodeListingProps } from "./code";
 import { sourceModuleById, sourceModules } from "./source-data";
@@ -102,6 +103,14 @@ type DocsRoute = {
   pageId: DocsPageId;
   sectionId?: string;
 };
+
+const docsTheme = defineTheme({
+  name: "astryxkit-docs",
+  extends: astryxKitTheme,
+  tokens: {
+    "--color-on-accent": ["#FFFFFF", "#0A1317"],
+  },
+});
 
 const installSnippet = `npm install astryxkit \\
   @astryxdesign/core @stylexjs/stylex \\
@@ -4271,7 +4280,7 @@ export function DocsApp() {
   useDocsSearchShortcut(setSearchQuery);
 
   return (
-    <AstryxKitProvider appearance="system">
+    <AstryxKitProvider appearance="system" theme={docsTheme}>
       <AppShell
         xstyle={styles.docsShell}
         height="auto"
@@ -4294,18 +4303,18 @@ export function DocsApp() {
 
 const styles = stylex.create({
   docsShell: {
-    backgroundColor: "#f4f7fa",
+    backgroundColor: colorVars["--color-background-body"],
   },
   topNavStripe: {
-    backgroundColor: "#fff",
-    borderBottomColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-surface"],
+    borderBottomColor: colorVars["--color-border"],
     borderBottomStyle: "solid",
     borderBottomWidth: borderVars["--border-width"],
-    boxShadow: "0 1px 1px rgba(16, 17, 26, 0.08)",
+    boxShadow: shadowVars["--shadow-low"],
   },
   sideNavStripe: {
-    backgroundColor: "#f4f7fa",
-    borderInlineEndColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-body"],
+    borderInlineEndColor: colorVars["--color-border"],
     borderInlineEndStyle: "solid",
     borderInlineEndWidth: borderVars["--border-width"],
   },
@@ -4326,13 +4335,12 @@ const styles = stylex.create({
     zIndex: 20,
   },
   quickFindResults: {
-    backgroundColor: "#fff",
-    borderColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-popover"],
+    borderColor: colorVars["--color-border"],
     borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
-    boxShadow:
-      "0 1px 1px rgba(16, 17, 26, 0.08), 0 8px 24px rgba(60, 66, 87, 0.08)",
+    boxShadow: shadowVars["--shadow-med"],
     insetInlineEnd: 0,
     insetInlineStart: 0,
     maxHeight: "min(60vh, 360px)",
@@ -4353,18 +4361,18 @@ const styles = stylex.create({
     paddingBlock: spacingVars["--spacing-2"],
     paddingInline: spacingVars["--spacing-3"],
     ":hover": {
-      backgroundColor: "#f6f8fa",
+      backgroundColor: colorVars["--color-overlay-hover"],
     },
     ":focus-within": {
-      backgroundColor: "#f6f8fa",
+      backgroundColor: colorVars["--color-overlay-hover"],
     },
   },
   quickFindEmpty: {
     padding: spacingVars["--spacing-4"],
   },
   heroBand: {
-    backgroundColor: "#fff",
-    borderBottomColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-surface"],
+    borderBottomColor: colorVars["--color-border"],
     borderBottomStyle: "solid",
     borderBottomWidth: borderVars["--border-width"],
     paddingBlock: spacingVars["--spacing-10"],
@@ -4399,20 +4407,19 @@ const styles = stylex.create({
     gap: spacingVars["--spacing-2"],
   },
   systemFrame: {
-    backgroundColor: "#fff",
-    borderColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-card"],
+    borderColor: colorVars["--color-border"],
     borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
-    boxShadow:
-      "0 1px 1px rgba(16, 17, 26, 0.08), 0 2px 5px rgba(60, 66, 87, 0.08)",
+    boxShadow: shadowVars["--shadow-low"],
     minWidth: 0,
     overflow: "hidden",
   },
   systemHeader: {
     alignItems: "center",
-    backgroundColor: "#f6f8fa",
-    borderBottomColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-muted"],
+    borderBottomColor: colorVars["--color-border"],
     borderBottomStyle: "solid",
     borderBottomWidth: borderVars["--border-width"],
     display: "flex",
@@ -4432,7 +4439,7 @@ const styles = stylex.create({
   },
   systemRow: {
     alignItems: "start",
-    borderBottomColor: "#e3e8ee",
+    borderBottomColor: colorVars["--color-border"],
     borderBottomStyle: "solid",
     borderBottomWidth: borderVars["--border-width"],
     display: "grid",
@@ -4447,7 +4454,7 @@ const styles = stylex.create({
     minWidth: 0,
   },
   metricStrip: {
-    borderTopColor: "#e3e8ee",
+    borderTopColor: colorVars["--color-border"],
     borderTopStyle: "solid",
     borderTopWidth: borderVars["--border-width"],
     display: "grid",
@@ -4455,15 +4462,15 @@ const styles = stylex.create({
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
   },
   metric: {
-    borderInlineEndColor: "#e3e8ee",
+    borderInlineEndColor: colorVars["--color-border"],
     borderInlineEndStyle: "solid",
     borderInlineEndWidth: borderVars["--border-width"],
     paddingBlock: spacingVars["--spacing-3"],
     paddingInline: spacingVars["--spacing-4"],
   },
   band: {
-    backgroundColor: "#fff",
-    borderBottomColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-surface"],
+    borderBottomColor: colorVars["--color-border"],
     borderBottomStyle: "solid",
     borderBottomWidth: borderVars["--border-width"],
     paddingBlock: spacingVars["--spacing-10"],
@@ -4474,7 +4481,7 @@ const styles = stylex.create({
     scrollMarginTop: `calc(${spacingVars["--spacing-12"]} + ${spacingVars["--spacing-8"]})`,
   },
   bandMuted: {
-    backgroundColor: "#f4f7fa",
+    backgroundColor: colorVars["--color-background-body"],
   },
   bandInner: {
     display: "grid",
@@ -4530,20 +4537,19 @@ const styles = stylex.create({
   codeBlockStripe: {
     borderColor: "#1a2652",
     borderRadius: radiusVars["--radius-inner"],
-    boxShadow:
-      "0 1px 1px rgba(16, 17, 26, 0.08), 0 8px 24px rgba(60, 66, 87, 0.08)",
+    boxShadow: shadowVars["--shadow-med"],
   },
   notePanel: {
-    backgroundColor: "#fff",
-    borderColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-card"],
+    borderColor: colorVars["--color-border"],
     borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
     padding: spacingVars["--spacing-4"],
   },
   packageMetaPanel: {
-    backgroundColor: "#fff",
-    borderColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-card"],
+    borderColor: colorVars["--color-border"],
     borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
@@ -4564,8 +4570,8 @@ const styles = stylex.create({
   },
   surfacePanel: {
     alignContent: "start",
-    backgroundColor: "#fff",
-    borderColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-card"],
+    borderColor: colorVars["--color-border"],
     borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
@@ -4582,8 +4588,8 @@ const styles = stylex.create({
   },
   iconFrame: {
     alignItems: "center",
-    backgroundColor: "#f6f8fa",
-    borderColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-muted"],
+    borderColor: colorVars["--color-border"],
     borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
@@ -4600,8 +4606,8 @@ const styles = stylex.create({
     padding: 0,
   },
   stepItem: {
-    backgroundColor: "#fff",
-    borderColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-card"],
+    borderColor: colorVars["--color-border"],
     borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
@@ -4614,7 +4620,7 @@ const styles = stylex.create({
     alignItems: "center",
     backgroundColor: "#556cd6",
     borderRadius: radiusVars["--radius-inner"],
-    color: colorVars["--color-on-accent"],
+    color: colorVars["--color-on-dark"],
     display: "inline-flex",
     fontFamily: typographyVars["--font-family-code"],
     height: spacingVars["--spacing-8"],
@@ -4634,8 +4640,8 @@ const styles = stylex.create({
     padding: 0,
   },
   layerItem: {
-    backgroundColor: "#fff",
-    borderColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-card"],
+    borderColor: colorVars["--color-border"],
     borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
@@ -4645,12 +4651,12 @@ const styles = stylex.create({
     paddingInline: spacingVars["--spacing-4"],
   },
   interactivePanel: {
-    backgroundColor: "#fff",
-    borderColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-card"],
+    borderColor: colorVars["--color-border"],
     borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
-    boxShadow: "0 1px 1px rgba(16, 17, 26, 0.08)",
+    boxShadow: shadowVars["--shadow-low"],
     display: "grid",
     gap: spacingVars["--spacing-5"],
     padding: spacingVars["--spacing-5"],
@@ -4690,8 +4696,8 @@ const styles = stylex.create({
     minWidth: 0,
   },
   resultCard: {
-    backgroundColor: "#fff",
-    borderColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-card"],
+    borderColor: colorVars["--color-border"],
     borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
@@ -4702,8 +4708,8 @@ const styles = stylex.create({
   },
   resultRank: {
     alignItems: "center",
-    backgroundColor: "#f6f8fa",
-    borderColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-muted"],
+    borderColor: colorVars["--color-border"],
     borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
@@ -4728,8 +4734,8 @@ const styles = stylex.create({
     gap: spacingVars["--spacing-2"],
   },
   emptyResult: {
-    backgroundColor: "#fff",
-    borderColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-card"],
+    borderColor: colorVars["--color-border"],
     borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
@@ -4754,8 +4760,8 @@ const styles = stylex.create({
   },
   prefRow: {
     alignItems: "start",
-    backgroundColor: "#fff",
-    borderColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-card"],
+    borderColor: colorVars["--color-border"],
     borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
@@ -4782,8 +4788,8 @@ const styles = stylex.create({
     minWidth: 0,
   },
   prefReadout: {
-    backgroundColor: "#f6f8fa",
-    borderColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-muted"],
+    borderColor: colorVars["--color-border"],
     borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
@@ -4797,12 +4803,12 @@ const styles = stylex.create({
     gap: spacingVars["--spacing-3"],
   },
   generatorGuideCard: {
-    backgroundColor: "#fff",
-    borderColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-card"],
+    borderColor: colorVars["--color-border"],
     borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
-    boxShadow: "0 1px 1px rgba(16, 17, 26, 0.08)",
+    boxShadow: shadowVars["--shadow-low"],
     display: "grid",
     gap: spacingVars["--spacing-4"],
     padding: spacingVars["--spacing-4"],
@@ -4841,8 +4847,8 @@ const styles = stylex.create({
   },
   decisionItem: {
     alignItems: "start",
-    backgroundColor: "#fff",
-    borderColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-card"],
+    borderColor: colorVars["--color-border"],
     borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
@@ -4857,18 +4863,18 @@ const styles = stylex.create({
     minWidth: 0,
   },
   tableFrame: {
-    backgroundColor: "#fff",
-    borderColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-card"],
+    borderColor: colorVars["--color-border"],
     borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
-    boxShadow: "0 1px 1px rgba(16, 17, 26, 0.08)",
+    boxShadow: shadowVars["--shadow-low"],
     minWidth: 0,
     overflowX: "auto",
   },
   tableCaption: {
-    backgroundColor: "#f6f8fa",
-    borderBottomColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-muted"],
+    borderBottomColor: colorVars["--color-border"],
     borderBottomStyle: "solid",
     borderBottomWidth: borderVars["--border-width"],
     paddingBlock: spacingVars["--spacing-3"],
@@ -4882,7 +4888,7 @@ const styles = stylex.create({
   },
   specItem: {
     borderBottomColor: {
-      default: "#e3e8ee",
+      default: colorVars["--color-border"],
       ":last-child": "transparent",
     },
     borderBottomStyle: "solid",
@@ -4903,8 +4909,8 @@ const styles = stylex.create({
     rowGap: spacingVars["--spacing-1"],
   },
   linkPanel: {
-    backgroundColor: "#fff",
-    borderColor: "#e3e8ee",
+    backgroundColor: colorVars["--color-background-card"],
+    borderColor: colorVars["--color-border"],
     borderRadius: radiusVars["--radius-inner"],
     borderStyle: "solid",
     borderWidth: borderVars["--border-width"],
@@ -4920,7 +4926,7 @@ const styles = stylex.create({
     padding: 0,
   },
   linkItem: {
-    borderTopColor: "#e3e8ee",
+    borderTopColor: colorVars["--color-border"],
     borderTopStyle: "solid",
     borderTopWidth: borderVars["--border-width"],
     paddingBlockStart: spacingVars["--spacing-2"],
