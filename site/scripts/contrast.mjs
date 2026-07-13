@@ -50,13 +50,26 @@ try {
     });
 
     for (const route of routes) {
-      await page.goto(`${previewUrl}#/${route}`, { waitUntil: "networkidle" });
+      const routeStartedAt = Date.now();
+
+      await page.goto(`${previewUrl}#/${route}`, {
+        waitUntil: "domcontentloaded",
+      });
+      await page.evaluate(
+        () =>
+          new Promise((resolve) => {
+            requestAnimationFrame(() => requestAnimationFrame(resolve));
+          }),
+      );
       failures.push(
         ...(await page.evaluate(auditContrast)).map((failure) => ({
           ...failure,
           colorScheme,
           route,
         })),
+      );
+      console.log(
+        `Checked ${colorScheme}/${route} in ${Date.now() - routeStartedAt}ms.`,
       );
     }
 
