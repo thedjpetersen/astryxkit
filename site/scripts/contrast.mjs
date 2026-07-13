@@ -3,14 +3,17 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
+const viteBin = fileURLToPath(
+  new URL("../../node_modules/vite/bin/vite.js", import.meta.url),
+);
 const previewUrl = "http://127.0.0.1:4175/astryxkit/";
 const routes = ["overview", "quickstart", "runtime", "build", "reference", "source"];
 const colorSchemes = ["light", "dark"];
 
 const preview = spawn(
-  "npx",
+  process.execPath,
   [
-    "vite",
+    viteBin,
     "preview",
     "--config",
     "site/vite.config.ts",
