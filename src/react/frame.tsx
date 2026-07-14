@@ -14,10 +14,10 @@ import {
   SideNavSection,
 } from "@astryxdesign/core/SideNav";
 import { TopNav, TopNavHeading, TopNavItem } from "@astryxdesign/core/TopNav";
-import { Fragment, useMemo, useState, type ReactNode } from "react";
-import type { ShellHost, WorkspaceContext } from "../core/host.js";
+import { Fragment, useState, type ReactNode } from "react";
+import type { ShellHost, WorkspaceContext } from "app-foundry/core";
+import { useShellFrameModel } from "app-foundry/react";
 import { ShellCommandPalette } from "./command-palette.js";
-import { useHostVersion, useShellTopNavMounts } from "./react-bindings.js";
 
 export type ShellNavItem = {
   href: string;
@@ -55,20 +55,18 @@ export function ShellFrame({
   topNavItems = [],
   workspace,
 }: ShellFrameProps) {
-  const version = useHostVersion(host);
   const [isCommandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const apps = useMemo(() => host.getManifests(), [host, version]);
-  const activeApp = useMemo(
-    () => host.getManifestForPathname(currentPathname),
-    [currentPathname, host, version]
-  );
+  const { activeApp, apps, topNavMounts } = useShellFrameModel({
+    currentPathname,
+    host,
+  });
   // A header mount is a takeover: the first one contributed replaces the
   // brand block entirely (think a meeting app swapping in a room switcher);
   // start/center/end mounts merely append alongside the host's own items.
-  const topNavHeaderMounts = useShellTopNavMounts(host, "header");
-  const topNavStartMounts = useShellTopNavMounts(host, "start");
-  const topNavCenterMounts = useShellTopNavMounts(host, "center");
-  const topNavEndMounts = useShellTopNavMounts(host, "end");
+  const topNavHeaderMounts = topNavMounts.header;
+  const topNavStartMounts = topNavMounts.start;
+  const topNavCenterMounts = topNavMounts.center;
+  const topNavEndMounts = topNavMounts.end;
   const contributedHeading = topNavHeaderMounts[0]?.content;
   const topNav = (
     <TopNav

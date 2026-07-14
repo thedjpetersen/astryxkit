@@ -4,25 +4,31 @@
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-556cd6)](https://thedjpetersen.github.io/astryxkit/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-0d8626.svg)](LICENSE)
 
-AstryxKit is a reusable framework for building Cloudflare Workers applications
-with an Astryx design-system shell, isolated micro-app modules, a command
-palette, layered preferences, and small Worker API helpers.
+AstryxKit is the Astryx presentation library for App Foundry applications. It
+renders App Foundry's design-system-neutral application contracts as an Astryx
+shell, command palette, preferences surface, and isolated app outlet.
 
-It is intentionally framework-shaped rather than product-shaped. Host
-applications own their product routes, bindings, schema, and deployment model;
-AstryxKit provides the shared shell runtime and UI conventions those products
-can build on.
+The architecture has three independent libraries: `app-foundry` owns durable
+runtime and collaboration contracts; `astryxkit` implements those contracts
+with Astryx; `ledgerkit` implements the same feature seams with a separate
+editorial design language. Host applications choose one UI kit and keep
+ownership of product routes, bindings, schema, and deployment.
 
 ![AstryxKit docs site](docs/assets/astryxkit-docs-home.png)
 
 ## What Is Included
 
-| Export                    | Purpose                                                                                                                  |
+| Library / export          | Purpose                                                                                                                  |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `astryxkit/core`          | Shell runtime: commands, context keys, events, app manifests, activation lifecycle, preferences, workspace entity sources, AI-attribution normalization, and import-map helpers. |
-| `astryxkit/react`         | React bindings, the Astryx shell frame, app outlet, command palette, preferences panel, share-code chip, and AI-attribution badge.                                               |
-| `astryxkit/design-system` | Default Astryx theme wrapper, appearance mode storage, and shared media-query constants.                                                                                         |
-| `astryxkit/worker`        | Small Cloudflare Workers HTTP, D1, short-link, capability-guard, CSRF, and rate-limit helpers that keep API boundaries explicit.                                                 |
+| `app-foundry/core`        | Commands, context, events, app manifests, activation, preferences, entities, access control, and import maps.           |
+| `app-foundry/react`       | Headless frame, palette, preferences, and app-outlet models plus the UI-kit presentation contract.                       |
+| `app-foundry/worker`      | Small HTTP, D1, short-link, capability-guard, CSRF, and rate-limit helpers.                                                |
+| `app-foundry/generator`   | Naming, path containment, overwrite protection, dry runs, and filesystem mechanics for UI-kit-owned recipes.             |
+| `astryxkit/react`         | The Astryx presentation adapter, shell frame, palette, preferences, app outlet, and shared Astryx affordances.           |
+| `astryxkit/design-system` | Default Astryx theme wrapper, appearance storage, and shared media-query constants.                                      |
+
+The `astryxkit/core` and `astryxkit/worker` exports remain as compatibility
+re-exports during the 0.x migration.
 
 ## When To Use It
 
@@ -41,7 +47,8 @@ apps, teams, or workflows need to live inside the same shell.
 ## Install
 
 ```bash
-npm install astryxkit @astryxdesign/core @stylexjs/stylex react react-dom
+npm install app-foundry astryxkit \
+  @astryxdesign/core @stylexjs/stylex react react-dom
 ```
 
 The package is published as
@@ -49,12 +56,12 @@ The package is published as
 site is hosted at https://thedjpetersen.github.io/astryxkit/.
 
 AstryxKit keeps React, Astryx Core, and StyleX as peer dependencies so the host
-application owns its UI runtime.
+application owns its UI runtime. `app-foundry` imports no design system or CSS.
 
 ## Shell Runtime
 
 ```ts
-import { ShellHost, createShellSDK } from "astryxkit/core";
+import { ShellHost, createShellSDK } from "app-foundry/core";
 
 const sdk = createShellSDK({ platformId: "my-platform" });
 const host = new ShellHost({

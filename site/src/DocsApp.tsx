@@ -402,36 +402,27 @@ import { createWorkerRouter, json } from "astryxkit/worker";`;
 
 const packageSurfaces: Surface[] = [
   {
-    body: "The framework boundary for app registration, activation, command routing, context keys, preferences, workspace entity sources, events, and import maps.",
-    code: "astryxkit/core",
-    eyebrow: "Runtime",
+    body: "The design-system-neutral application framework: manifests, activation and disposal, commands, preferences, events, entities, Worker helpers, generator mechanics, and headless React models.",
+    code: "app-foundry",
+    eyebrow: "Framework",
     href: "#/runtime/lifecycle",
     icon: "wrench",
-    title: "Shell runtime",
+    title: "App Foundry",
   },
   {
-    body: "The React integration for the shell frame, active app outlet, command palette, preferences panel, share-code chip, AI-attribution badge, and host-state hooks.",
-    code: "astryxkit/react",
-    eyebrow: "Interface",
-    href: "#/runtime/react",
-    icon: "viewColumns",
-    title: "React shell",
-  },
-  {
-    body: "The Astryx provider wrapper, appearance persistence, and shared media-query constants. Use Astryx controls, then compose custom surfaces with StyleX.",
-    code: "astryxkit/design-system",
-    eyebrow: "Design",
+    body: "The Astryx presentation adapter: AppShell, SideNav, command palette, preferences, app lifecycle states, theming, and branded generator recipes over App Foundry.",
+    code: "astryxkit",
+    eyebrow: "UI kit",
     href: "#/runtime/design-system",
-    icon: "checkDouble",
-    title: "Design system",
+    icon: "viewColumns",
+    title: "AstryxKit",
   },
   {
-    body: "Small helpers for JSON responses, request parsing, route composition, short links, asset fallback, health checks, and D1 access.",
-    code: "astryxkit/worker",
-    eyebrow: "Edge",
-    href: "#/reference/workers",
-    icon: "externalLink",
-    title: "Worker boundary",
+    body: "An independently branded editorial presentation adapter built with Tailwind and Radix. It implements the same frame, palette, preferences, and app-outlet contracts without importing Astryx.",
+    code: "ledgerkit",
+    eyebrow: "UI kit",
+    icon: "checkDouble",
+    title: "LedgerKit",
   },
 ];
 
@@ -517,30 +508,30 @@ const architectureRows: SpecRow[] = [
   },
   {
     detail:
-      "Owns app registration, activation, command routing, context keys, preferences, events, and app-scoped disposal.",
-    name: "Shell runtime",
-    tag: "core",
+      "Owns app registration, activation, command routing, context keys, preferences, events, app-scoped disposal, Worker helpers, and presentation-neutral controllers.",
+    name: "App Foundry",
+    tag: "framework",
     tagVariant: "purple",
   },
   {
     detail:
-      "Owns a manifest, lazy activation module, commands, preferences, features, and rendered application surface.",
-    name: "Micro-app",
-    tag: "app",
+      "Defines feature-level frame, palette, preferences, outlet, and error-boundary props. It does not mirror design-system primitives.",
+    name: "Presentation seam",
+    tag: "contract",
     tagVariant: "teal",
   },
   {
     detail:
-      "Owns frame composition, active app outlet, command palette, preferences panel, and host-state hooks.",
-    name: "React package",
-    tag: "react",
+      "Each owns its components, tokens, icons, layout choices, theme behavior, CSS, and branded generator recipes. A host chooses one.",
+    name: "AstryxKit / LedgerKit",
+    tag: "UI kits",
     tagVariant: "green",
   },
   {
     detail:
-      "Owns only request-boundary helpers; schemas, migrations, bindings, and deployment topology stay in the host app.",
-    name: "Worker helpers",
-    tag: "edge",
+      "Owns a manifest, lazy activation module, commands, preferences, features, and business behavior. It depends on contracts, not either UI kit.",
+    name: "App module",
+    tag: "domain",
     tagVariant: "orange",
   },
 ];
@@ -756,7 +747,7 @@ const docsSections: DocsSection[] = [
     id: "overview",
     label: "Overview",
     pageId: "overview",
-    summary: "Framework positioning, package surfaces, and the system map.",
+    summary: "Three-library positioning, package surfaces, and the system map.",
   },
   {
     group: "Start",
@@ -796,9 +787,9 @@ const docsSections: DocsSection[] = [
     group: "Concepts",
     icon: "viewColumns",
     id: "framework-map",
-    label: "Framework map",
+    label: "Library map",
     pageId: "overview",
-    summary: "Runtime, React, design-system, and Worker ownership boundaries.",
+    summary: "App Foundry, AstryxKit, and LedgerKit ownership boundaries.",
   },
   {
     group: "Concepts",
@@ -2007,14 +1998,14 @@ function DocsHero() {
           </HStack>
           <VStack gap={4}>
             <Heading level={1} type="display-3" id="hero-title">
-              The framework layer for Astryx products that need to scale past
+              The Astryx UI kit for an application framework that scales past
               one app.
             </Heading>
             <Text as="p" type="large" display="block" color="secondary">
-              AstryxKit gives host products a shared shell runtime, React frame,
-              command palette, layered preferences, design-system contract, and
-              compact Cloudflare Worker helpers without taking ownership of
-              product routes or infrastructure.
+              App Foundry gives hosts stable application contracts and headless
+              orchestration. AstryxKit renders those contracts with Astryx;
+              LedgerKit is an independent alternative over the same feature
+              seams. Hosts keep ownership of product routes and infrastructure.
             </Text>
           </VStack>
           <section
@@ -2060,10 +2051,10 @@ function DocsHero() {
             <HStack gap={1.5} align="center">
               <span {...stylex.props(styles.statusDot)} />
               <Text type="supporting" color="secondary">
-                published on npm
+                three-library architecture
               </Text>
             </HStack>
-            <Code>astryxkit@0.1.0</Code>
+            <Code>app-foundry → UI kit</Code>
           </header>
           <section {...stylex.props(styles.systemBody)}>
             {packageSurfaces.map((surface) => (
@@ -2071,9 +2062,9 @@ function DocsHero() {
             ))}
           </section>
           <footer {...stylex.props(styles.metricStrip)}>
-            <Metric label="exports" value="4" />
+            <Metric label="libraries" value="3" />
             <Metric label="generators" value="6" />
-            <Metric label="tests" value="22" />
+            <Metric label="contracts" value="5" />
           </footer>
         </aside>
       </article>
@@ -2191,11 +2182,12 @@ function Install() {
         <section {...stylex.props(styles.copyBlock)}>
           <SectionHeader
             badge="Install"
-            title="Install the framework, keep peers explicit."
+            title="Install the Astryx UI kit; App Foundry supplies the runtime."
           >
-            AstryxKit depends on the host product for React, Astryx Core, and
-            StyleX. That keeps product shells aligned with the application
-            runtime they already own.
+            AstryxKit depends on App Foundry and keeps React, Astryx Core, and
+            StyleX as host-owned peers. App modules should import durable runtime
+            contracts from App Foundry; existing AstryxKit core and Worker
+            imports remain available during the 0.x migration.
           </SectionHeader>
           <section {...stylex.props(styles.notePanel)}>
             <Text as="p" display="block" color="secondary">
@@ -2338,12 +2330,12 @@ function FrameworkMap() {
   return (
     <Band id="framework-map">
       <SectionHeader
-        badge="Framework map"
-        title="Four package surfaces, one product contract."
+        badge="Library map"
+        title="One application framework, two UI kits, three independent libraries."
       >
-        Each export maps to a stable ownership boundary. The runtime is not a
-        page builder; it is the contract that lets independently owned app
-        modules behave like one product.
+        App Foundry owns the durable contracts. AstryxKit and LedgerKit render
+        those contracts with different design languages. App modules depend on
+        the framework and remain portable between hosts.
       </SectionHeader>
       <section {...stylex.props(styles.surfaceGrid)}>
         {packageSurfaces.map((surface) => (
@@ -2369,10 +2361,11 @@ function Motivation() {
         </SectionHeader>
         <VStack gap={4}>
           <Text as="p" display="block" color="secondary">
-            AstryxKit narrows that chain of decisions. Framework layers settle
-            recurring choices about runtime, shell behavior, the design system,
-            commands, preferences, and Worker boundaries before an app asks a
-            model to build anything.
+            App Foundry narrows that chain of decisions. Framework layers settle
+            recurring choices about runtime, shell behavior, commands,
+            preferences, lifecycle, and Worker boundaries before an app asks a
+            model to build anything. A selected UI kit settles presentation
+            choices without pushing those choices back into the framework.
           </Text>
           <Text as="p" display="block" color="secondary">
             Inside those rails, domain-driven design and package-by-feature
@@ -2383,8 +2376,9 @@ function Motivation() {
           <Text as="p" display="block" color="secondary">
             Apps can then be developed independently while collaborating through
             stable contracts and APIs. Teams and models share the seams, not the
-            implementation, so parallel work does not require a shared pile of
-            internal state.
+            implementation. The same app module can sit behind AstryxKit or
+            LedgerKit without learning either component system, so parallel work
+            does not require a shared pile of internal state.
           </Text>
           <Text as="p" display="block" color="secondary">
             The payoff is disposable leverage. We can bootstrap an app quickly,
@@ -2414,15 +2408,16 @@ function ArchitectureModel() {
           >
             The framework is useful because it keeps responsibilities explicit:
             product apps own product policy, the shell owns cross-app runtime
-            behavior, and micro-apps contribute capabilities through typed
-            contracts.
+            behavior, UI kits own presentation, and app modules contribute
+            capabilities through typed contracts.
           </SectionHeader>
           <section {...stylex.props(styles.notePanel)}>
             <Text as="p" display="block" color="secondary">
               Use this model when deciding where code belongs. If a decision
               depends on a customer, workspace, deployment, binding, schema, or
-              authorization policy, it belongs to the host product, not
-              AstryxKit.
+              authorization policy, it belongs to the host product. If it is a
+              reusable lifecycle or collaboration rule, it belongs to App
+              Foundry. If it is visual, it belongs to the selected UI kit.
             </Text>
           </section>
         </section>

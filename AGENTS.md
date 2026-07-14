@@ -24,3 +24,17 @@ Rules:
 - Use SideNav for sidebar navigation.
 - Use Section for page regions and Card only for discrete items.
 - Use design tokens from `npx astryx docs tokens`.
+
+## Agent skills
+
+### Issue tracker
+
+Planning artifacts live as local markdown under `.scratch/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the default five-role triage vocabulary. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This is a single-context repository. See `docs/agents/domain.md`.

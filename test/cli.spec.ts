@@ -100,6 +100,15 @@ describe("ak generators", () => {
     expect(result[0]?.action).toBe("overwrite");
   });
 
+  it("refuses output paths outside the requested project", async () => {
+    await expect(
+      generate("command", "catalog.refresh", {
+        cwd: tempDir,
+        dir: "../outside",
+      }),
+    ).rejects.toThrow("Refusing to write outside");
+  });
+
   it("runs through the CLI wrapper", async () => {
     let stdout = "";
     let stderr = "";
