@@ -1,7 +1,7 @@
 {
   "name": "astryxkit",
   "version": "0.1.0",
-  "description": "A micro-app shell framework for Astryx-designed Cloudflare Workers applications.",
+  "description": "The Astryx UI kit and compatibility package for App Foundry applications.",
   "type": "module",
   "license": "MIT",
   "bin": {
@@ -22,6 +22,9 @@
     "micro-app",
     "shell",
     "design-system"
+  ],
+  "workspaces": [
+    "packages/*"
   ],
   "files": [
     "dist",
@@ -52,16 +55,20 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "check": "tsc --noEmit",
+    "build": "npm run clean && npm run build -w app-foundry && tsc -p tsconfig.build.json",
+    "check": "npm run check -w app-foundry && tsc --noEmit",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "docs:build": "vite build --config site/vite.config.ts",
     "docs:contrast": "node site/scripts/contrast.mjs",
     "docs:dev": "vite --config site/vite.config.ts --host 127.0.0.1",
     "docs:preview": "vite preview --config site/vite.config.ts --host 127.0.0.1",
     "docs:screenshot": "node site/scripts/screenshot.mjs",
     "prepare": "npm run build",
-    "test": "vitest run",
+    "test": "npm run build -w app-foundry && vitest run",
     "validate": "npm run check && npm run test && npm run build && npm run docs:build && npm run docs:contrast"
+  },
+  "dependencies": {
+    "app-foundry": "0.1.0"
   },
   "peerDependencies": {
     "@astryxdesign/core": "^0.1.4",

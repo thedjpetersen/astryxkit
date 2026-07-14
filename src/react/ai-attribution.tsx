@@ -8,7 +8,7 @@ import { Text } from "@astryxdesign/core/Text";
 import * as stylex from "@stylexjs/stylex";
 import type { StyleXStyles } from "@stylexjs/stylex";
 import type { SVGProps } from "react";
-import type { AiAttribution } from "../core/provenance.js";
+import type { AiAttribution } from "app-foundry/core";
 
 const styles = stylex.create({
   root: {

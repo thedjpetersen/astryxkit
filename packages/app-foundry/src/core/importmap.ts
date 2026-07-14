@@ -11,22 +11,24 @@ export type ShellImportMap = {
   imports: Record<string, string>;
 };
 
-export const shellImportMapId = "astryxkit-importmap";
+export const shellImportMapId = "app-foundry-importmap";
 
 // Dev-server paths, deliberately: production hosts substitute their own
 // pins (CDN URLs, hashed bundles) via `buildShellImportMap`'s second
 // argument. These defaults make the local-dev story work out of the box.
-export const sharedImportPins: Record<string, string> = {
-  "@astryxdesign/core/": "/node_modules/@astryxdesign/core/",
-  "@astryxkit/sdk": "/node_modules/astryxkit/dist/core/shell-sdk.js",
-  "astryxkit": "/node_modules/astryxkit/dist/index.js",
-  "astryxkit/core": "/node_modules/astryxkit/dist/core/index.js",
-  "astryxkit/react": "/node_modules/astryxkit/dist/react/index.js",
+export const appFoundryImportPins: Record<string, string> = {
+  "@app-foundry/sdk": "/node_modules/app-foundry/dist/core/shell-sdk.js",
+  "app-foundry": "/node_modules/app-foundry/dist/index.js",
+  "app-foundry/core": "/node_modules/app-foundry/dist/core/index.js",
+  "app-foundry/react": "/node_modules/app-foundry/dist/react/index.js",
+  "app-foundry/worker": "/node_modules/app-foundry/dist/worker/index.js",
   "react": "/node_modules/.vite/deps/react.js",
   "react-dom": "/node_modules/.vite/deps/react-dom.js",
   "react-dom/": "/node_modules/.vite/deps/react-dom/",
   "react-dom/client": "/node_modules/.vite/deps/react-dom_client.js",
 };
+
+export const sharedImportPins = appFoundryImportPins;
 
 export function buildShellImportMap(
   manifests: ShellAppManifest[],

@@ -5,6 +5,14 @@
     "jsx": "react-jsx",
     "module": "ES2022",
     "moduleResolution": "Bundler",
+    "baseUrl": ".",
+    "paths": {
+      "app-foundry": ["./packages/app-foundry/src/index.ts"],
+      "app-foundry/core": ["./packages/app-foundry/src/core/index.ts"],
+      "app-foundry/generator": ["./packages/app-foundry/src/generator/index.ts"],
+      "app-foundry/react": ["./packages/app-foundry/src/react/index.ts"],
+      "app-foundry/worker": ["./packages/app-foundry/src/worker/index.ts"]
+    },
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
