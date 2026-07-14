@@ -24,6 +24,20 @@ describe("astryxkit shell SDK", () => {
     resetShellForTests();
   });
 
+  it("adopts the legacy AstryxKit singleton at the compatibility boundary", () => {
+    const legacy = createShellSDK({ platformId: "legacy" });
+    const globalScope = globalThis as typeof globalThis & {
+      __appFoundryShellSdk?: ReturnType<typeof createShellSDK>;
+      __astryxkitShellSdk?: ReturnType<typeof createShellSDK>;
+    };
+
+    delete globalScope.__appFoundryShellSdk;
+    globalScope.__astryxkitShellSdk = legacy;
+
+    expect(shell()).toBe(legacy);
+    expect(globalScope.__appFoundryShellSdk).toBe(legacy);
+  });
+
   it("declares commands and preferences before the app loads", () => {
     const host = new ShellHost();
     const app = createTestApp("cold-one");
