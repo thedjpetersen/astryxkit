@@ -4,368 +4,160 @@
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-556cd6)](https://thedjpetersen.github.io/astryxkit/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-0d8626.svg)](LICENSE)
 
-AstryxKit is the Astryx presentation library for App Foundry applications. It
-renders App Foundry's design-system-neutral application contracts as an Astryx
-shell, command palette, preferences surface, and isolated app outlet.
+AstryxKit is the Astryx presentation library for [App Foundry](https://github.com/thedjpetersen/app-foundry) applications.
 
-The architecture has three independent libraries: `app-foundry` owns durable
-runtime and collaboration contracts; `astryxkit` implements those contracts
-with Astryx; `ledgerkit` implements the same feature seams with a separate
-editorial design language. Host applications choose one UI kit and keep
-ownership of product routes, bindings, schema, and deployment.
+It renders App Foundry feature models as an Astryx shell frame, command palette, preferences surface, App Module outlet, and error boundary.
+
+AstryxKit does not own application lifecycle, commands, preferences, events, access control, Worker helpers, or shared contracts. Those belong to App Foundry.
 
 ![AstryxKit docs site](docs/assets/astryxkit-docs-home.png)
 
-## What Is Included
+## Scope
 
-| Library / export          | Purpose                                                                                                                  |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `app-foundry/core`        | Commands, context, events, app manifests, activation, preferences, entities, access control, and import maps.           |
-| `app-foundry/react`       | Headless frame, palette, preferences, and app-outlet models plus the UI-kit presentation contract.                       |
-| `app-foundry/worker`      | Small HTTP, D1, short-link, capability-guard, CSRF, and rate-limit helpers.                                                |
-| `app-foundry/generator`   | Naming, path containment, overwrite protection, dry runs, and filesystem mechanics for UI-kit-owned recipes.             |
-| `astryxkit/react`         | The Astryx presentation adapter, shell frame, palette, preferences, app outlet, and shared Astryx affordances.           |
-| `astryxkit/design-system` | Default Astryx theme wrapper, appearance storage, and shared media-query constants.                                      |
+| AstryxKit owns | App Foundry owns |
+| --- | --- |
+| Astryx components and composition | App manifests and activation |
+| Shell frame and navigation rendering | Commands, preferences, events, and entities |
+| Command-palette presentation | Access control and import maps |
+| Preferences presentation | Headless React feature models |
+| App outlet and error presentation | Worker helpers and neutral generator mechanics |
+| Theme, appearance, icons, and StyleX | Stable contracts shared by every UI kit |
+| Astryx-branded generator recipes | Filesystem safety and naming rules |
 
-The `astryxkit/core` and `astryxkit/worker` exports remain as compatibility
-re-exports during the 0.x migration.
-
-## When To Use It
-
-Use AstryxKit when you are building a platform-style product where multiple
-apps, teams, or workflows need to live inside the same shell.
-
-- You want each app module to register commands, routes, and metadata without
-  owning the whole application frame.
-- You need command palette behavior, context-aware actions, and preference
-  resolution to be shared across products.
-- You want Astryx components and theme behavior to stay consistent across host
-  apps.
-- You are deploying on Cloudflare Workers and want lightweight helpers without
-  hiding bindings, limits, or product-specific infrastructure.
+Host products still own routes, customer policy, bindings, persistence, schema, and deployment.
 
 ## Install
 
-```bash
+The npm registry currently serves AstryxKit `0.1.0`. This repository is preparing `0.2.0`, which separates framework contracts into App Foundry.
+
+For the released package:
+
+```sh
+npm install astryxkit @astryxdesign/core @stylexjs/stylex react react-dom
+```
+
+For the `0.2.0` source architecture, install App Foundry alongside AstryxKit:
+
+```sh
 npm install app-foundry astryxkit \
   @astryxdesign/core @stylexjs/stylex react react-dom
 ```
 
-The package is published as
-[`astryxkit`](https://www.npmjs.com/package/astryxkit) on npm. The public docs
-site is hosted at https://thedjpetersen.github.io/astryxkit/.
-
-AstryxKit keeps React, Astryx Core, and StyleX as peer dependencies so the host
-application owns its UI runtime. `app-foundry` imports no design system or CSS.
-
-## Shell Runtime
+Application code should import durable contracts from App Foundry and presentation from AstryxKit.
 
 ```ts
 import { ShellHost, createShellSDK } from "app-foundry/core";
-
-const sdk = createShellSDK({ platformId: "my-platform" });
-const host = new ShellHost({
-  shell: sdk,
-  preferencesRoute: "/preferences",
-  defaultDocsRoute: "/docs",
-});
-
-host.register({
-  id: "tasks",
-  name: "Tasks",
-  ownerTeam: "Operations",
-  route: "/app/tasks",
-  entryUrl: "/app/modules/tasks.js",
-  icon: "checkDouble",
-  commands: [
-    {
-      id: "tasks.open",
-      appId: "tasks",
-      category: "Apps",
-      title: "Open Tasks",
-      route: "/app/tasks",
-    },
-  ],
-  load: () => import("@app/tasks"),
-});
+import { astryxPresentationAdapter } from "astryxkit/react";
 ```
 
-Commands can declare `shortcodes` for stable human-facing IDs that should be
-searchable and routeable without being treated as loose keywords:
-
-```ts
-host.register({
-  id: "tasks",
-  name: "Tasks",
-  ownerTeam: "Operations",
-  route: "/app/tasks",
-  entryUrl: "/app/modules/tasks.js",
-  icon: "checkDouble",
-  commands: [
-    {
-      id: "tasks.task.pto.open",
-      appId: "tasks",
-      category: "Tasks",
-      title: "PTO reference",
-      route: "/app/tasks/T00000A",
-      shortcodes: ["T00000A"],
-    },
-  ],
-  load: () => import("@app/tasks"),
-});
-
-const command = host.commandForShortcode("t00000a");
-```
-
-Shortcode lookup is case-insensitive and accepts a leading `#` in the query.
-Use `shortcodes` for canonical record IDs; keep `keywords` for broad discovery
-terms and synonyms.
-
-Apps can also contribute **workspace entity sources**: how to enumerate the
-things they own (tasks, documents, rooms) so shell surfaces like mention
-popups and reference explorers can span every app without hardcoding any of
-them. The host aggregates all sources with per-source failure isolation.
-
-```ts
-host.register({
-  // ...manifest fields as above
-  entitySources: [
-    {
-      id: "tasks:entities",
-      appId: "tasks",
-      label: "Tasks",
-      kinds: [{ id: "task", label: "Task", pluralLabel: "Tasks" }],
-      list: async ({ workspace }) => ({
-        entities: (await fetchTasks(workspace.slug)).map((task) => ({
-          kind: "task",
-          route: `/app/tasks/${task.shortCode}`,
-          title: task.title,
-          code: task.shortCode,
-          owner: task.ownerName,
-        })),
-      }),
-    },
-  ],
-});
-
-const index = await host.listWorkspaceEntities(workspace);
-// index.entities, index.corpus, index.failedSourceIds
-```
-
-Sources may also return a `corpus` of serialized rich-text bodies;
-`findEntityReferences()` scans it to answer "where is this entity
-mentioned?", and `filterWorkspaceEntities()` ranks entities for `@`-style
-popups. Entity identity for mentions defaults to the entity route; set
-`mentionId` when several entities share one route.
-
-## React Shell
+## Presentation Adapter
 
 ```tsx
-import { ShellAppOutlet, ShellFrame } from "astryxkit/react";
+import { ShellHost } from "app-foundry/core";
+import {
+  AstryxKitProvider,
+} from "astryxkit/design-system";
+import {
+  ShellAppOutlet,
+  ShellFrame,
+} from "astryxkit/react";
 
-export function App() {
-  return (
-    <ShellFrame
-      host={host}
-      workspace={{ name: "Northstar", slug: "northstar" }}
-      currentPathname="/app/tasks"
-      brandName="Northstar"
-    >
-      <ShellAppOutlet
-        appId="tasks"
-        host={host}
-        workspace={{ name: "Northstar", slug: "northstar" }}
-        route={{ pathname: "/app/tasks", slug: "tasks" }}
-        navigate={(href) => host.navigate(href)}
-      />
-    </ShellFrame>
-  );
-}
-```
+const host = new ShellHost();
 
-The React package also ships two small cross-app primitives:
-
-```tsx
-import { AiAttributionBadge, ShareCodeChip } from "astryxkit/react";
-
-// Click-to-copy short-link chip; hover shows the full share URL.
-<ShareCodeChip code="DLNCHBRF" sharePath="/d/DLNCHBRF" label="Document link" />;
-
-// Visible provenance for AI-produced text; renders nothing for null.
-<AiAttributionBadge attribution="Workers AI · Whisper" />;
-```
-
-`ShareCodeChip` pairs with the Worker short-link helpers below so every app
-presents codes the same way. `AiAttributionBadge` pairs with
-`normalizeAiAttribution()` from `astryxkit/core` so AI-generated content
-always carries a visible source.
-
-## Design System
-
-Wrap host applications in `AstryxKitProvider` when they should inherit the
-default AstryxKit theme and appearance persistence behavior.
-
-```tsx
-import { AstryxKitProvider } from "astryxkit/design-system";
-
-export function Root() {
+export function ProductShell() {
   return (
     <AstryxKitProvider>
-      <App />
+      <ShellFrame
+        host={host}
+        workspace={{ name: "Northstar", slug: "northstar" }}
+        currentPathname="/app/catalog"
+        brandName="Northstar"
+      >
+        <ShellAppOutlet
+          appId="catalog"
+          host={host}
+          workspace={{ name: "Northstar", slug: "northstar" }}
+          route={{ pathname: "/app/catalog", slug: "catalog" }}
+          navigate={(href) => host.navigate(href)}
+        />
+      </ShellFrame>
     </AstryxKitProvider>
   );
 }
 ```
 
-The framework UI is built from Astryx components. When adding UI to this repo,
-follow the local Astryx instructions in `AGENTS.md`: inspect the relevant
-template, read every component doc you use, prefer component props, and use
-`xstyle` for custom styling.
+The feature-level adapter keeps App Modules portable. They depend on framework contracts instead of importing Astryx components into domain behavior.
 
-The design-system module also exports shared `mediaQueries` constants
-(StyleX `defineConsts`) so apps stop re-declaring capability and breakpoint
-queries per component:
+## Public Exports
 
-```ts
-import { mediaQueries } from "astryxkit/design-system";
+| Export | Purpose |
+| --- | --- |
+| `astryxkit/react` | Astryx frame, palette, preferences, App Module outlet, error boundary, and presentation adapter. |
+| `astryxkit/design-system` | Theme provider, appearance persistence, and shared media-query constants. |
+| `astryxkit/core` | Deprecated App Foundry compatibility re-exports during the `0.x` migration. |
+| `astryxkit/worker` | Deprecated App Foundry Worker compatibility re-exports during the `0.x` migration. |
 
-const styles = stylex.create({
-  trigger: {
-    backgroundColor: {
-      default: "transparent",
-      ":hover": {
-        default: "transparent",
-        [mediaQueries.canHover]: "var(--color-overlay-hover)",
-      },
-    },
-    transitionDuration: {
-      default: "var(--duration-fast)",
-      [mediaQueries.reducedMotion]: "0ms",
-    },
-  },
-});
+Use `app-foundry/core`, `app-foundry/react`, and `app-foundry/worker` for new framework code.
+
+## Design-System Integration
+
+`AstryxKitProvider` applies the AstryxKit theme and appearance persistence behavior. The host owns React, Astryx Core, and StyleX as peer dependencies.
+
+The package also exports shared `mediaQueries` constants so Astryx applications do not redeclare input-capability and breakpoint queries.
+
+When changing UI in this repository, follow `AGENTS.md`: inspect the Astryx template and component docs first, use design tokens, and use `xstyle` for custom styling.
+
+## Generators
+
+AstryxKit owns recipes that emit Astryx imports, components, and layout. App Foundry supplies the neutral naming and filesystem-safety engine.
+
+```sh
+npx astryxkit generators
+npx astryxkit generate shell Northstar
+npx astryxkit generate app Catalog --dry-run
 ```
 
-Cross-package StyleX constants require `unstable_moduleResolution` in the
-consuming app's StyleX Babel config.
+The short `ak` binary exposes the same commands.
 
-## Cloudflare Workers
+## Compatibility
 
-AstryxKit keeps Worker helpers small and explicit. Current Cloudflare docs
-should still be checked before changing Workers, D1, KV, R2, Durable Object,
-Queue, Vectorize, Workers AI, or Agents SDK behavior.
+AstryxKit `0.2.0` keeps deprecated framework exports so existing `astryxkit/core` and `astryxkit/worker` imports can migrate incrementally.
 
-Beyond routing, JSON, and D1 helpers, the Worker module covers platform-wide
-short links: `generateShortCode()` for opaque codes (`D7KQ2M9X`),
-`generateReadableCode()` for read-aloud codes (`kfq4-x2mh`), and
-`createShortLinkRoute()` to resolve `/d/<code>`-style paths into app routes:
+The compatibility layer also adopts the legacy AstryxKit shell singleton. The neutral App Foundry runtime contains no Astryx-branded global or UI dependency.
 
-```ts
-import { createShortLinkRoute, createWorkerRouter } from "astryxkit/worker";
+## Documentation
 
-const router = createWorkerRouter<Env>({
-  routes: [
-    createShortLinkRoute({
-      pathPrefix: "/d",
-      resolve: (code, { env }) => lookupDocumentRoute(env, code),
-    }),
-  ],
-});
-```
-
-The kit also ships a generic access-control primitive shared by all three
-layers. `astryxkit/core` provides the pure model and policy engine:
-`defineAccessControl()` turns a host's permission registry + role map into a
-model, `computeEffectivePermissions()` resolves `(role + grants) - denies`
-(denies win, unknown values are ignored), and `authorize()`/`can()` answer
-capability questions deny-by-default, including self-scoped permissions
-("edit your OWN comment"). `astryxkit/worker` enforces it at the boundary
-with `requireCapability()`/`createCapabilityGuard()` (401 vs 403), plus
-double-submit CSRF helpers (`generateCsrfToken`, `issueCsrfCookie`,
-`verifyCsrf`) and a fixed-window `createD1RateLimiter()` whose table the
-host migrates (`buildRateLimitTableSql`). `astryxkit/react` closes the loop
-with the headless `CapabilityProvider`/`useCan()` bindings and
-`usePermissionEditor()` for grant/deny override UIs. Permission strings,
-storage, and business rules stay in the host product.
-
-- Workers docs: https://developers.cloudflare.com/workers/
-- Workers limits: https://developers.cloudflare.com/workers/platform/limits/
-- D1 docs: https://developers.cloudflare.com/d1/
-- D1 limits: https://developers.cloudflare.com/d1/platform/limits/
-
-The retrieved documentation notes for this repo are in
-[`docs/cloudflare.md`](docs/cloudflare.md).
-
-## Docs Site
-
-The static docs site lives in [`site/`](site/) and is built with Vite. Code
-snippets are rendered with a symbol-aware highlighter: identifiers that match
-an AstryxKit export link to docco-style annotated source pages (the `Source`
-tab), where comment prose sits beside the code it describes and every
-declaration is deep-linkable via `#/source/<module>?s=<Symbol>`.
-The public site is hosted at https://thedjpetersen.github.io/astryxkit/.
-
-```bash
-npm run docs:dev
-npm run docs:build
-npm run docs:screenshot
-```
-
-- Local docs: `npm run docs:dev -- --port 5174`, then open
-  `http://127.0.0.1:5174/astryxkit/`.
-- Production build output: `site/dist`.
-- README screenshot output: `docs/assets/astryxkit-docs-home.png`.
-- GitHub Pages deployment: `.github/workflows/docs.yml`.
-
-## CLI
-
-AstryxKit ships an `ak` CLI for Rails-like generators. It is also exposed as
-`astryxkit` for environments where the short binary is less clear.
-
-```bash
-ak generators
-ak --version
-ak g shell Northstar
-ak g app Catalog
-ak g command catalog.refresh
-ak g preference catalog.density
-ak g worker-route catalog
-ak g d1-repository customer
-```
-
-Generators create the repeated extension points that appear in AstryxKit host
-apps: shell composition, micro-app manifests, command contributions, preference
-schemas, Worker routes, and D1 repositories. See
-[`docs/generators.md`](docs/generators.md) for the full rationale and options.
-
-To verify the published CLI from the registry:
-
-```bash
-npx astryxkit@latest --version
-npx astryxkit@latest generators
-```
+- [AstryxKit docs site](https://thedjpetersen.github.io/astryxkit/)
+- [App Foundry Motivation](https://github.com/thedjpetersen/app-foundry/blob/main/docs/motivation.md)
+- [App Foundry Architecture](https://github.com/thedjpetersen/app-foundry/blob/main/docs/architecture.md)
+- [Presentation Seam](https://github.com/thedjpetersen/app-foundry/blob/main/docs/presentation-seam.md)
+- [Astryx design-system notes](docs/design-system.md)
+- [Astryx generator recipes](docs/generators.md)
 
 ## Development
 
-```bash
-npm install
+Clone with the standalone App Foundry repository initialized as a submodule:
+
+```sh
+git clone --recurse-submodules git@github.com:thedjpetersen/astryxkit.git
+cd astryxkit
+npm ci
 npm run validate
 ```
 
-`npm run validate` runs TypeScript checks, Vitest, the package build, and the
-docs build.
+If the repository is already cloned, run `git submodule update --init --recursive` before installing dependencies.
+
+`npm run validate` type-checks, runs the compatibility and adapter tests, builds both packages, builds the docs, and checks every docs route in light and dark mode.
 
 ## Repository Layout
 
 ```text
-src/core/           Shell SDK, host runtime, commands, preferences, import maps
-src/react/          Shell frame, app outlet, command palette, React hooks
-src/design-system/  AstryxKit theme provider and appearance helpers
-src/worker/         Cloudflare Workers HTTP and D1 helpers
-docs/               Architecture, design-system, Cloudflare notes, screenshots
-site/               Vite documentation site
-test/               Unit tests
-examples/           Minimal host-app example
+packages/app-foundry/   git submodule for the standalone framework repository
+src/react/              Astryx presentation surfaces
+src/design-system/      Astryx theme and shared media constants
+src/cli/                Astryx-branded generator recipes
+site/                   public AstryxKit documentation
+test/                   compatibility, adapter, CLI, and integration tests
 ```
 
 ## License

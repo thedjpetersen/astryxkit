@@ -113,7 +113,7 @@ const docsTheme = defineTheme({
   },
 });
 
-const installSnippet = `npm install astryxkit \\
+const installSnippet = `npm install app-foundry astryxkit \\
   @astryxdesign/core @stylexjs/stylex \\
   react react-dom`;
 
@@ -122,7 +122,7 @@ npx astryxkit@latest --version
 npx astryxkit@latest generators`;
 
 
-const shellSnippet = `import { ShellHost } from "astryxkit/core";
+const shellSnippet = `import { ShellHost } from "app-foundry/core";
 import { ShellFrame, ShellAppOutlet } from "astryxkit/react";
 
 const host = new ShellHost({
@@ -288,7 +288,7 @@ ak g d1-repository customer
 # Preview a customized output root first.
 ak g app Billing --dir src/features --dry-run`;
 
-const workerSnippet = `import { createWorkerRouter, json } from "astryxkit/worker";
+const workerSnippet = `import { createWorkerRouter, json } from "app-foundry/worker";
 import { catalogRoute } from "./routes/catalog";
 
 export default {
@@ -303,7 +303,7 @@ const d1Snippet = `import {
   prepareD1Statement,
   requireD1Database,
   runD1Batch,
-} from "astryxkit/worker";
+} from "app-foundry/worker";
 
 export function createCustomerRepository(env: Env) {
   const database = requireD1Database(env, "DB");
@@ -390,7 +390,7 @@ export function bindRefreshCatalogCommand(shell: ShellSDK) {
   });
 }`;
 
-const exportMapSnippet = `import { ShellHost, shell } from "astryxkit/core";
+const exportMapSnippet = `import { ShellHost, shell } from "app-foundry/core";
 import {
   ShellAppOutlet,
   ShellCommandPalette,
@@ -398,14 +398,14 @@ import {
   ShellPreferencesPanel,
 } from "astryxkit/react";
 import { AstryxKitProvider } from "astryxkit/design-system";
-import { createWorkerRouter, json } from "astryxkit/worker";`;
+import { createWorkerRouter, json } from "app-foundry/worker";`;
 
 const packageSurfaces: Surface[] = [
   {
     body: "The design-system-neutral application framework: manifests, activation and disposal, commands, preferences, events, entities, Worker helpers, generator mechanics, and headless React models.",
     code: "app-foundry",
     eyebrow: "Framework",
-    href: "#/runtime/lifecycle",
+    href: "https://github.com/thedjpetersen/app-foundry/blob/main/docs/architecture.md",
     icon: "wrench",
     title: "App Foundry",
   },
@@ -567,7 +567,7 @@ const projectLayoutRows: SpecRow[] = [
   },
   {
     detail:
-      "Worker route and repository modules use AstryxKit helpers but keep bindings, auth, and persistence decisions explicit.",
+      "Worker route and repository modules use App Foundry helpers but keep bindings, auth, and persistence decisions explicit.",
     name: "src/worker",
     tag: "edge",
     tagVariant: "orange",
@@ -1025,7 +1025,7 @@ const topNavigationItems: TopNavigationItem[] = [
   { href: "#/overview", label: "Overview", pageId: "overview" },
   { href: "#/motivation", label: "Motivation", pageId: "motivation" },
   { href: "#/quickstart", label: "Quickstart", pageId: "quickstart" },
-  { href: "#/runtime", label: "Runtime", pageId: "runtime" },
+  { href: "#/runtime", label: "Integration", pageId: "runtime" },
   { href: "#/build", label: "Build", pageId: "build" },
   { href: "#/reference", label: "Reference", pageId: "reference" },
   { href: "#/source", label: "Source", pageId: "source" },
@@ -1049,7 +1049,7 @@ const docsPages: Record<DocsPageId, { label: string; sectionIds: string[] }> = {
     sectionIds: ["install", "quickstart", "project-layout"],
   },
   runtime: {
-    label: "Runtime",
+    label: "Integration",
     sectionIds: [
       "manifests",
       "lifecycle",
@@ -1581,16 +1581,16 @@ const apiRows: SpecRow[] = [
 const exportRows: SpecRow[] = [
   {
     detail:
-      "Barrel export for the main runtime, React helpers, design provider, and Worker helpers. Use when product bundling benefits from one import.",
+      "Compatibility barrel retained during the 0.x split. Prefer ownership-specific App Foundry and AstryxKit subpath imports in new code.",
     name: "astryxkit",
-    tag: "root",
+    tag: "compat",
     tagVariant: "blue",
   },
   {
     detail:
-      "ShellHost, manifest types, ShellSDK services, command registry, preferences store, context service, event bus, and import-map helpers.",
+      "Deprecated compatibility re-export of App Foundry core contracts. New application code imports app-foundry/core directly.",
     name: "astryxkit/core",
-    tag: "runtime",
+    tag: "compat",
     tagVariant: "purple",
   },
   {
@@ -1609,9 +1609,9 @@ const exportRows: SpecRow[] = [
   },
   {
     detail:
-      "JSON responses, defensive body parsing, Worker router, redirect helper, health response, and D1 binding/statement helpers.",
+      "Deprecated compatibility re-export of App Foundry Worker helpers. New Worker code imports app-foundry/worker directly.",
     name: "astryxkit/worker",
-    tag: "edge",
+    tag: "compat",
     tagVariant: "orange",
   },
 ];
@@ -1746,20 +1746,24 @@ const workerRows: SpecRow[] = [
 
 const docLinks: LinkRow[] = [
   {
-    href: "https://github.com/thedjpetersen/astryxkit/blob/main/docs/architecture.md",
-    label: "Architecture notes",
+    href: "https://github.com/thedjpetersen/app-foundry/blob/main/docs/architecture.md",
+    label: "App Foundry architecture",
+  },
+  {
+    href: "https://github.com/thedjpetersen/app-foundry/blob/main/docs/presentation-seam.md",
+    label: "Presentation Seam",
   },
   {
     href: "https://github.com/thedjpetersen/astryxkit/blob/main/docs/design-system.md",
     label: "Design-system notes",
   },
   {
-    href: "https://github.com/thedjpetersen/astryxkit/blob/main/docs/generators.md",
-    label: "Generator rationale",
+    href: "https://github.com/thedjpetersen/app-foundry/blob/main/docs/generators.md",
+    label: "Neutral generator engine",
   },
   {
-    href: "https://github.com/thedjpetersen/astryxkit/blob/main/docs/cloudflare.md",
-    label: "Cloudflare notes",
+    href: "https://github.com/thedjpetersen/astryxkit/blob/main/docs/generators.md",
+    label: "Astryx generator recipes",
   },
 ];
 
@@ -1992,20 +1996,18 @@ function DocsHero() {
           aria-labelledby="hero-title"
         >
           <HStack gap={2} wrap="wrap">
-            <Badge variant="neutral" label="Micro-app shell" />
-            <Badge variant="neutral" label="Command runtime" />
-            <Badge variant="neutral" label="Worker boundary" />
+            <Badge variant="neutral" label="Astryx presentation" />
+            <Badge variant="neutral" label="App Foundry adapter" />
+            <Badge variant="neutral" label="Shell surfaces" />
           </HStack>
           <VStack gap={4}>
             <Heading level={1} type="display-3" id="hero-title">
-              The Astryx UI kit for an application framework that scales past
-              one app.
+              Astryx presentation for independently developed App Foundry apps.
             </Heading>
             <Text as="p" type="large" display="block" color="secondary">
-              App Foundry gives hosts stable application contracts and headless
-              orchestration. AstryxKit renders those contracts with Astryx;
-              LedgerKit is an independent alternative over the same feature
-              seams. Hosts keep ownership of product routes and infrastructure.
+              App Foundry owns application contracts and headless orchestration.
+              AstryxKit stays at the presentation boundary: frame, palette,
+              preferences, app outlet, error states, theme, and Astryx recipes.
             </Text>
           </VStack>
           <section
@@ -2019,8 +2021,10 @@ function DocsHero() {
               icon={<Icon icon="chevronRight" size="sm" />}
             />
             <Button
-              label="Browse reference"
-              href="#/reference/reference"
+              label="App Foundry docs"
+              href="https://github.com/thedjpetersen/app-foundry"
+              target="_blank"
+              rel="noreferrer"
               variant="secondary"
               icon={<Icon icon="search" size="sm" />}
             />
@@ -2051,10 +2055,10 @@ function DocsHero() {
             <HStack gap={1.5} align="center">
               <span {...stylex.props(styles.statusDot)} />
               <Text type="supporting" color="secondary">
-                three-library architecture
+                App Foundry + AstryxKit
               </Text>
             </HStack>
-            <Code>app-foundry → UI kit</Code>
+            <Code>framework → presentation</Code>
           </header>
           <section {...stylex.props(styles.systemBody)}>
             {packageSurfaces.map((surface) => (
@@ -2332,11 +2336,11 @@ function FrameworkMap() {
     <Band id="framework-map">
       <SectionHeader
         badge="Library map"
-        title="One application framework, two UI kits, three independent libraries."
+        title="App Foundry underneath; AstryxKit at the presentation boundary."
       >
-        App Foundry owns the durable contracts. AstryxKit and LedgerKit render
-        those contracts with different design languages. App modules depend on
-        the framework and remain portable between hosts.
+        This site documents the Astryx integration. App Foundry owns the durable
+        contracts; UI kits render its feature models. App Modules depend on the
+        framework and remain portable between hosts.
       </SectionHeader>
       <section {...stylex.props(styles.surfaceGrid)}>
         {packageSurfaces.map((surface) => (
@@ -2392,6 +2396,14 @@ function Motivation() {
             small: understand the domain, choose the business behavior, and
             implement it.
           </Text>
+          <Link
+            href="https://github.com/thedjpetersen/app-foundry/blob/main/docs/motivation.md"
+            target="_blank"
+            rel="noreferrer"
+            isStandalone
+          >
+            Read the canonical App Foundry motivation
+          </Link>
         </VStack>
       </section>
     </Band>
@@ -2501,9 +2513,9 @@ function RuntimeLifecycle() {
             badge="Runtime"
             title="The host lifecycle is explicit by design."
           >
-            AstryxKit keeps the expensive and stateful parts of a shell product
-            in one place: registering apps, activating modules, binding
-            commands, resolving preferences, and disposing app-scoped resources.
+            App Foundry keeps stateful runtime behavior in one place. AstryxKit
+            renders the resulting navigation, commands, preferences, loading,
+            ready, empty, and failure states through Astryx components.
           </SectionHeader>
           <section {...stylex.props(styles.surfaceGridCompact)}>
             {lifecycleSteps.map((surface) => (
@@ -3796,11 +3808,11 @@ function Workers() {
         <section {...stylex.props(styles.copyBlock)}>
           <SectionHeader
             badge="Workers"
-            title="Worker helpers stay small so infrastructure stays honest."
+            title="Worker helpers belong to App Foundry."
           >
-            AstryxKit provides request-boundary helpers, not a platform
-            abstraction. Host apps still own bindings, schema, migrations,
-            deployment topology, limits, and product-specific data access.
+            New code imports request-boundary helpers from App Foundry. The
+            AstryxKit Worker export remains only as a 0.x compatibility seam.
+            Hosts still own bindings, schema, migrations, limits, and data access.
           </SectionHeader>
           <SpecTable caption="Worker helper reference" rows={workerRows} />
           <section {...stylex.props(styles.linkPanel)}>
@@ -3900,11 +3912,11 @@ function Reference() {
         <section {...stylex.props(styles.copyBlock)}>
           <SectionHeader
             badge="Reference"
-            title="The public API mirrors product ownership boundaries."
+            title="AstryxKit reference stops at presentation."
           >
-            The reference is intentionally short. The framework surface should
-            make product seams clearer: shell runtime, app modules, React UI,
-            design wrapper, and Worker helpers.
+            Use this reference for Astryx surfaces, theming, recipes, and 0.x
+            compatibility. Use App Foundry documentation for lifecycle,
+            contracts, neutral generators, and Worker helpers.
           </SectionHeader>
           <section {...stylex.props(styles.linkPanel)}>
             <Heading level={3}>Repository docs</Heading>
@@ -3915,7 +3927,7 @@ function Reference() {
             <LinkList links={docLinks} />
           </section>
         </section>
-        <SpecTable caption="Core API map" rows={apiRows} />
+        <SpecTable caption="Integration API map" rows={apiRows} />
       </section>
     </Band>
   );
