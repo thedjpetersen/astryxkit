@@ -18,10 +18,10 @@
   "homepage": "https://thedjpetersen.github.io/astryxkit/",
   "keywords": [
     "astryx",
-    "cloudflare-workers",
-    "micro-app",
-    "shell",
-    "design-system"
+    "app-foundry",
+    "design-system",
+    "react",
+    "ui-kit"
   ],
   "workspaces": [
     "packages/*"

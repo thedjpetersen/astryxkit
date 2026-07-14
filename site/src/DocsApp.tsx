@@ -72,7 +72,7 @@ type LinkRow = {
 
 type DocsSectionGroup =
   | "Build"
-  | "Concepts"
+  | "Presentation"
   | "Reference"
   | "Source"
   | "Start";
@@ -124,6 +124,7 @@ npx astryxkit@latest generators`;
 
 const shellSnippet = `import { ShellHost } from "app-foundry/core";
 import { ShellFrame, ShellAppOutlet } from "astryxkit/react";
+import { AstryxKitProvider } from "astryxkit/design-system";
 
 const host = new ShellHost({
   defaultDocsRoute: "/docs",
@@ -132,19 +133,21 @@ const host = new ShellHost({
 
 export function ProductShell() {
   return (
-    <ShellFrame
-      host={host}
-      workspace={{ name: "Northstar", slug: "northstar" }}
-      brandName="Northstar"
-      currentPathname="/app/catalog">
-      <ShellAppOutlet
-        appId="catalog"
+    <AstryxKitProvider>
+      <ShellFrame
         host={host}
         workspace={{ name: "Northstar", slug: "northstar" }}
-        route={{ pathname: "/app/catalog", slug: "catalog" }}
-        navigate={(href) => host.navigate(href)}
-      />
-    </ShellFrame>
+        brandName="Northstar"
+        currentPathname="/app/catalog">
+        <ShellAppOutlet
+          appId="catalog"
+          host={host}
+          workspace={{ name: "Northstar", slug: "northstar" }}
+          route={{ pathname: "/app/catalog", slug: "catalog" }}
+          navigate={(href) => host.navigate(href)}
+        />
+      </ShellFrame>
+    </AstryxKitProvider>
   );
 }`;
 
@@ -217,10 +220,12 @@ const preferenceSnippet = `export const catalogDensityPreference: PreferenceSche
 const reactSnippet = `import {
   ShellCommandPalette,
   ShellPreferencesPanel,
+} from "astryxkit/react";
+import {
   useCommandSource,
   useContextKey,
   usePreferenceInspection,
-} from "astryxkit/react";
+} from "app-foundry/react";
 
 const source = {
   id: "catalog:bulk-actions",
@@ -397,8 +402,10 @@ import {
   ShellFrame,
   ShellPreferencesPanel,
 } from "astryxkit/react";
-import { AstryxKitProvider } from "astryxkit/design-system";
-import { createWorkerRouter, json } from "app-foundry/worker";`;
+import {
+  AstryxKitProvider,
+  mediaQueries,
+} from "astryxkit/design-system";`;
 
 const packageSurfaces: Surface[] = [
   {
@@ -410,10 +417,10 @@ const packageSurfaces: Surface[] = [
     title: "App Foundry",
   },
   {
-    body: "The Astryx presentation adapter: AppShell, SideNav, command palette, preferences, app lifecycle states, theming, and branded generator recipes over App Foundry.",
+    body: "The Astryx presentation adapter: AppShell, SideNav, command palette, preferences, app outlet states, theming, and branded generator recipes over App Foundry.",
     code: "astryxkit",
     eyebrow: "UI kit",
-    href: "#/runtime/design-system",
+    href: "#/runtime/react",
     icon: "viewColumns",
     title: "AstryxKit",
   },
@@ -747,7 +754,7 @@ const docsSections: DocsSection[] = [
     id: "overview",
     label: "Overview",
     pageId: "overview",
-    summary: "Three-library positioning, package surfaces, and the system map.",
+    summary: "What AstryxKit presents and what it delegates to App Foundry.",
   },
   {
     group: "Start",
@@ -772,19 +779,10 @@ const docsSections: DocsSection[] = [
     id: "quickstart",
     label: "Quickstart",
     pageId: "quickstart",
-    summary: "Create a shell, register an app manifest, and render the outlet.",
+    summary: "Connect an App Foundry host to the Astryx frame and outlet.",
   },
   {
-    group: "Start",
-    icon: "menu",
-    id: "project-layout",
-    label: "Project layout",
-    pageId: "quickstart",
-    summary:
-      "Where shell, app, command, preference, Worker, and repository files belong.",
-  },
-  {
-    group: "Concepts",
+    group: "Presentation",
     icon: "viewColumns",
     id: "framework-map",
     label: "Library map",
@@ -792,97 +790,36 @@ const docsSections: DocsSection[] = [
     summary: "App Foundry, AstryxKit, and LedgerKit ownership boundaries.",
   },
   {
-    group: "Concepts",
+    group: "Presentation",
     icon: "checkDouble",
     id: "architecture",
-    label: "Architecture model",
+    label: "Ownership boundary",
     pageId: "overview",
-    summary:
-      "Ownership boundaries between host products, shell runtime, micro-apps, React, and Workers.",
+    summary: "The presentation decisions that belong here—and the framework decisions that do not.",
   },
   {
-    group: "Concepts",
-    icon: "copy",
-    id: "manifests",
-    label: "App manifests",
-    pageId: "runtime",
-    summary:
-      "The route, module, command, preference, and feature contract for each micro-app.",
-  },
-  {
-    group: "Concepts",
-    icon: "clock",
-    id: "lifecycle",
-    label: "Runtime lifecycle",
-    pageId: "runtime",
-    summary: "Host construction, app registration, activation, and disposal.",
-  },
-  {
-    group: "Concepts",
-    icon: "chevronRight",
-    id: "activation-context",
-    label: "Activation context",
-    pageId: "runtime",
-    summary:
-      "What activate(context) receives and how app-scoped disposal should be used.",
-  },
-  {
-    group: "Concepts",
-    icon: "search",
-    id: "commands",
-    label: "Commands",
-    pageId: "runtime",
-    summary: "Palette modes, ranking, lazy activation, and context filtering.",
-  },
-  {
-    group: "Concepts",
-    icon: "wrench",
-    id: "preferences",
-    label: "Preferences",
-    pageId: "runtime",
-    summary: "Layered settings resolution with scope and source inspection.",
-  },
-  {
-    group: "Concepts",
-    icon: "arrowUp",
-    id: "events",
-    label: "Context and events",
-    pageId: "runtime",
-    summary:
-      "Context keys, when expressions, feature toggles, event emission, and host event history.",
-  },
-  {
-    group: "Concepts",
-    icon: "search",
-    id: "workspace-entities",
-    label: "Workspace entities",
-    pageId: "runtime",
-    summary:
-      "App-contributed entity sources, aggregation with failure isolation, mentions, and backlinks.",
-  },
-  {
-    group: "Concepts",
+    group: "Presentation",
     icon: "menu",
     id: "react",
-    label: "React shell",
+    label: "Presentation surfaces",
     pageId: "runtime",
-    summary: "ShellFrame, ShellAppOutlet, command palette, and React hooks.",
+    summary: "Astryx frame, outlet, palette, preferences, and error presentation.",
   },
   {
-    group: "Concepts",
+    group: "Presentation",
     icon: "checkDouble",
     id: "design-system",
-    label: "Design system",
+    label: "Theme and StyleX",
     pageId: "runtime",
-    summary: "Astryx primitives, StyleX composition, tokens, and UI rules.",
+    summary: "Astryx provider, appearance behavior, tokens, media queries, and composition rules.",
   },
   {
     group: "Build",
     icon: "menu",
     id: "cli",
-    label: "CLI",
+    label: "Astryx recipes",
     pageId: "build",
-    summary: "Generator command surface and scaffold ownership boundaries.",
+    summary: "Astryx-branded recipes layered over App Foundry generator mechanics.",
   },
   {
     group: "Build",
@@ -894,37 +831,11 @@ const docsSections: DocsSection[] = [
   },
   {
     group: "Build",
-    icon: "chevronRight",
-    id: "cli-workflows",
-    label: "CLI workflows",
-    pageId: "build",
-    summary:
-      "Recommended scaffold order, naming rules, custom directories, and safe overwrite workflow.",
-  },
-  {
-    group: "Build",
     icon: "copy",
     id: "generators",
     label: "Generators",
     pageId: "build",
-    summary: "Generated app, command, preference, Worker route, and D1 files.",
-  },
-  {
-    group: "Build",
-    icon: "checkDouble",
-    id: "generated-contracts",
-    label: "Generated contracts",
-    pageId: "build",
-    summary:
-      "What generated files promise, what they intentionally leave to product code, and when to edit them.",
-  },
-  {
-    group: "Reference",
-    icon: "externalLink",
-    id: "workers",
-    label: "Workers",
-    pageId: "reference",
-    summary: "HTTP helpers, D1 helpers, and external Cloudflare references.",
+    summary: "What each Astryx recipe adds to neutral framework scaffolding.",
   },
   {
     group: "Reference",
@@ -934,15 +845,6 @@ const docsSections: DocsSection[] = [
     pageId: "reference",
     summary:
       "Package entrypoints, public exports, and the ownership boundary each import implies.",
-  },
-  {
-    group: "Reference",
-    icon: "wrench",
-    id: "troubleshooting",
-    label: "Troubleshooting",
-    pageId: "reference",
-    summary:
-      "Common integration failures around activation, commands, context, preferences, and Workers.",
   },
   {
     group: "Reference",
@@ -956,9 +858,9 @@ const docsSections: DocsSection[] = [
     group: "Reference",
     icon: "success",
     id: "ship",
-    label: "Ship checklist",
+    label: "Release checklist",
     pageId: "reference",
-    summary: "Validation, UI inspection, and platform documentation checks.",
+    summary: "Package validation, UI inspection, and registry checks.",
   },
   ...sourceModules.map<DocsSection>((module) => ({
     group: "Source",
@@ -983,37 +885,19 @@ const docsSectionGroups: Array<{
 }> = [
   {
     title: "Start",
-    ids: ["overview", "motivation", "install", "quickstart", "project-layout"],
+    ids: ["overview", "motivation", "install", "quickstart"],
   },
   {
-    title: "Concepts",
-    ids: [
-      "framework-map",
-      "architecture",
-      "manifests",
-      "lifecycle",
-      "activation-context",
-      "commands",
-      "preferences",
-      "events",
-      "workspace-entities",
-      "react",
-      "design-system",
-    ],
+    title: "Presentation",
+    ids: ["framework-map", "architecture", "react", "design-system"],
   },
   {
     title: "Build",
-    ids: [
-      "cli",
-      "cli-reference",
-      "cli-workflows",
-      "generators",
-      "generated-contracts",
-    ],
+    ids: ["cli", "cli-reference", "generators"],
   },
   {
     title: "Reference",
-    ids: ["workers", "export-map", "troubleshooting", "reference", "ship"],
+    ids: ["export-map", "reference", "ship"],
   },
   {
     title: "Source",
@@ -1025,8 +909,8 @@ const topNavigationItems: TopNavigationItem[] = [
   { href: "#/overview", label: "Overview", pageId: "overview" },
   { href: "#/motivation", label: "Motivation", pageId: "motivation" },
   { href: "#/quickstart", label: "Quickstart", pageId: "quickstart" },
-  { href: "#/runtime", label: "Integration", pageId: "runtime" },
-  { href: "#/build", label: "Build", pageId: "build" },
+  { href: "#/runtime", label: "Presentation", pageId: "runtime" },
+  { href: "#/build", label: "Generators", pageId: "build" },
   { href: "#/reference", label: "Reference", pageId: "reference" },
   { href: "#/source", label: "Source", pageId: "source" },
 ];
@@ -1046,41 +930,19 @@ const docsPages: Record<DocsPageId, { label: string; sectionIds: string[] }> = {
   },
   quickstart: {
     label: "Quickstart",
-    sectionIds: ["install", "quickstart", "project-layout"],
+    sectionIds: ["install", "quickstart"],
   },
   runtime: {
-    label: "Integration",
-    sectionIds: [
-      "manifests",
-      "lifecycle",
-      "activation-context",
-      "commands",
-      "preferences",
-      "events",
-      "workspace-entities",
-      "react",
-      "design-system",
-    ],
+    label: "Presentation",
+    sectionIds: ["react", "design-system"],
   },
   build: {
-    label: "Build",
-    sectionIds: [
-      "cli",
-      "cli-reference",
-      "cli-workflows",
-      "generators",
-      "generated-contracts",
-    ],
+    label: "Generators",
+    sectionIds: ["cli", "cli-reference", "generators"],
   },
   reference: {
     label: "Reference",
-    sectionIds: [
-      "workers",
-      "export-map",
-      "troubleshooting",
-      "reference",
-      "ship",
-    ],
+    sectionIds: ["export-map", "reference", "ship"],
   },
   source: {
     label: "Annotated source",
@@ -1515,66 +1377,52 @@ const generatorRows: SpecRow[] = [
 const apiRows: SpecRow[] = [
   {
     detail:
-      "Registers manifests, activates micro-app modules, exposes palette/settings/events state, and owns navigation.",
-    name: "ShellHost",
-    tag: "core",
+      "Composes the Astryx AppShell, top navigation, side navigation, command trigger, and product content region.",
+    name: "ShellFrame",
+    tag: "frame",
     tagVariant: "blue",
   },
   {
     detail:
-      "The contract for route, owner, commands, preferences, features, entry URL, and lazy app loader.",
-    name: "ShellAppManifest",
-    tag: "core",
+      "Presents loading, ready, empty, and failure states for the App Foundry module selected by the host.",
+    name: "ShellAppOutlet",
+    tag: "outlet",
     tagVariant: "teal",
   },
   {
     detail:
-      "The lower-level registry, context, event bus, and preferences services used by ShellHost.",
-    name: "ShellSDK",
-    tag: "core",
+      "Renders App Foundry command results with Astryx controls, keyboard navigation, drill-in, and recent actions.",
+    name: "ShellCommandPalette",
+    tag: "palette",
     tagVariant: "purple",
   },
   {
     detail:
-      "Ranks palette results by command ring, prefix mode, text score, context expression, and recency.",
-    name: "CommandRegistry",
-    tag: "core",
+      "Presents grouped settings and resolved-source details from the App Foundry preferences model.",
+    name: "ShellPreferencesPanel",
+    tag: "settings",
     tagVariant: "green",
   },
   {
     detail:
-      "Looks up the command that owns a stable human-facing shortcode, useful when products implement short-link redirects.",
-    name: "host.commandForShortcode",
-    tag: "shortcodes",
+      "Applies the AstryxKit theme, appearance persistence, and controlled appearance hooks around presentation surfaces.",
+    name: "AstryxKitProvider",
+    tag: "theme",
     tagVariant: "cyan",
   },
   {
     detail:
-      "Resolves platform, product, app, feature, user, and default layers while preserving inspection metadata.",
-    name: "PreferencesStore",
-    tag: "core",
+      "Exports shared StyleX capability and breakpoint conditions for Astryx presentation code.",
+    name: "mediaQueries",
+    tag: "stylex",
     tagVariant: "orange",
   },
   {
     detail:
-      "Renders the Astryx AppShell, top navigation, side app navigation, command trigger, and child outlet.",
-    name: "ShellFrame",
-    tag: "react",
-    tagVariant: "teal",
-  },
-  {
-    detail:
-      "Activates the target app and renders its instance through the active route and workspace context.",
-    name: "ShellAppOutlet",
-    tag: "react",
+      "Keeps the legacy core and Worker imports working during the 0.x migration; new framework code imports App Foundry directly.",
+    name: "Compatibility exports",
+    tag: "0.x",
     tagVariant: "purple",
-  },
-  {
-    detail:
-      "Builds a compact Worker fetch handler from explicit routes, health check, asset fallback, and not-found handling.",
-    name: "createWorkerRouter",
-    tag: "worker",
-    tagVariant: "green",
   },
 ];
 
@@ -1808,7 +1656,7 @@ function TopNavigation({
         <TopNavHeading
           logo={<Icon icon="wrench" color="accent" />}
           heading="AstryxKit"
-          subheading="Framework docs"
+          subheading="Presentation docs"
           headingHref="#/overview"
         />
       }
@@ -2068,7 +1916,7 @@ function DocsHero() {
           <footer {...stylex.props(styles.metricStrip)}>
             <Metric label="libraries" value="3" />
             <Metric label="generators" value="6" />
-            <Metric label="contracts" value="5" />
+            <Metric label="surfaces" value="5" />
           </footer>
         </aside>
       </article>
@@ -3345,13 +3193,13 @@ function ReactShell() {
       <section {...stylex.props(styles.referenceSplit)}>
         <section {...stylex.props(styles.copyBlock)}>
           <SectionHeader
-            badge="React"
-            title="Shell UI is shared, app surfaces stay local."
+            badge="Presentation surfaces"
+            title="App Foundry supplies the model; AstryxKit decides how it looks."
           >
-            The React package gives products a working app shell without
-            dictating page content. App teams render through their own
-            activation instance; the shell owns common navigation, palette, and
-            settings behavior.
+            The adapter renders complete shell features instead of wrapping
+            design-system primitives one by one. App modules keep their domain
+            behavior and App Foundry contracts; AstryxKit owns the shared Astryx
+            frame, palette, preferences, outlet, and error states.
           </SectionHeader>
           <SpecTable
             caption="React surface responsibilities"
@@ -3384,6 +3232,13 @@ function ReactShell() {
                 detail:
                   "Groups visible settings by ring and exposes resolved source details to users.",
               },
+              {
+                name: "ShellAppErrorBoundary",
+                tag: "Failure",
+                tagVariant: "orange",
+                detail:
+                  "Turns App Foundry module failures into an Astryx recovery surface without moving error policy into app code.",
+              },
             ]}
           />
         </section>
@@ -3408,12 +3263,12 @@ function DesignSystem() {
       <section {...stylex.props(styles.guideGrid)}>
         <section {...stylex.props(styles.copyBlock)}>
           <SectionHeader
-            badge="Design system"
-            title="Use Astryx primitives, then raise the composition with StyleX."
+            badge="Theme and StyleX"
+            title="AstryxKit owns the presentation conventions around Astryx."
           >
-            Controls, text, navigation, shell layout, and code examples should
-            come from Astryx. Higher-order documentation surfaces should be
-            authored in StyleX using tokens, not pastel component variants.
+            The provider, appearance persistence, shared media conditions, and
+            higher-order shell composition live here. Runtime contracts and
+            headless feature state stay in App Foundry.
           </SectionHeader>
           <section {...stylex.props(styles.decisionList)}>
             <Decision
@@ -3465,12 +3320,13 @@ function Cli() {
       <section {...stylex.props(styles.referenceSplit)}>
         <section {...stylex.props(styles.copyBlock)}>
           <SectionHeader
-            badge="CLI"
-            title="Rails-like generators for stable framework seams."
+            badge="Astryx recipes"
+            title="App Foundry plans safe files; AstryxKit supplies the UI recipe."
           >
-            The <Code>ak</Code> CLI creates the repeated extension points a
-            shell product needs. It intentionally stops before product routing,
-            Cloudflare binding configuration, migrations, and deployment policy.
+            The <Code>ak</Code> CLI adds Astryx imports, providers, shell
+            composition, and starter views to App Foundry generator mechanics.
+            Product policy, routing, bindings, schema, and deployment stay with
+            the host application.
           </SectionHeader>
           <section {...stylex.props(styles.actionRow)} aria-label="CLI actions">
             <Button
@@ -3692,11 +3548,11 @@ function Generators() {
         <section {...stylex.props(styles.copyBlock)}>
           <SectionHeader
             badge="Generators"
-            title="Generate the next correct file, not an entire product."
+            title="Astryx recipes stay separate from neutral generator mechanics."
           >
-            Generators create typed first drafts around framework concepts. The
-            output is meant to be read, edited, committed, and owned by the host
-            application.
+            App Foundry owns naming, path containment, overwrite protection,
+            and dry runs. AstryxKit owns the recipe text that imports Astryx
+            components and composes the presentation adapter.
           </SectionHeader>
           <section {...stylex.props(styles.notePanel)}>
             <Text as="p" display="block" color="secondary">
@@ -3854,11 +3710,11 @@ function ExportMap() {
         <section {...stylex.props(styles.copyBlock)}>
           <SectionHeader
             badge="Export map"
-            title="Choose imports by ownership boundary."
+            title="Presentation imports come from AstryxKit."
           >
-            The package entrypoints are deliberately narrow. Use the entrypoint
-            that matches the layer you are editing so runtime code, UI code,
-            design wrapper code, and Worker helpers stay easy to audit.
+            New framework code imports App Foundry directly. AstryxKit exports
+            the React presentation adapter, theme integration, and temporary
+            0.x compatibility barrels.
           </SectionHeader>
           <SpecTable caption="Package entrypoints" rows={exportRows} />
         </section>
@@ -3939,12 +3795,11 @@ function ShipChecklist() {
       <section {...stylex.props(styles.referenceSplit)}>
         <section {...stylex.props(styles.copyBlock)}>
           <SectionHeader
-            badge="Ship"
-            title="What to verify before publishing a shell product."
+            badge="Release"
+            title="What to verify before publishing AstryxKit."
           >
-            The framework is intentionally explicit, so the release checklist is
-            explicit too. Validate the package, inspect generated files, and
-            confirm external platform assumptions before deployment.
+            Validate the presentation package, inspect generated Astryx files,
+            and verify the registry package from a clean consumer install.
           </SectionHeader>
           <ol {...stylex.props(styles.stepRail)}>
             <Step
@@ -3961,11 +3816,6 @@ function ShipChecklist() {
               index="03"
               title="Check UI composition"
               body="Verify no raw div elements or inline style props enter UI code, and inspect responsive docs screenshots."
-            />
-            <Step
-              index="04"
-              title="Re-check Cloudflare docs"
-              body="Before changing Workers, D1, KV, R2, Durable Objects, Queues, Vectorize, Workers AI, or Agents SDK behavior, retrieve current product docs and limits."
             />
           </ol>
         </section>
@@ -4300,19 +4150,11 @@ function DocsPage({
         <>
           <Install />
           <Quickstart />
-          <ProjectLayout />
         </>
       );
     case "runtime":
       return (
         <>
-          <ManifestContract />
-          <RuntimeLifecycle />
-          <ActivationContext />
-          <Commands />
-          <Preferences />
-          <RuntimeState />
-          <WorkspaceEntities />
           <ReactShell />
           <DesignSystem />
         </>
@@ -4322,17 +4164,13 @@ function DocsPage({
         <>
           <Cli />
           <CliReference />
-          <CliWorkflows />
           <Generators />
-          <GeneratedContracts />
         </>
       );
     case "reference":
       return (
         <>
-          <Workers />
           <ExportMap />
-          <Troubleshooting />
           <Reference />
           <ShipChecklist />
         </>

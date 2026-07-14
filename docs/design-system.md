@@ -81,8 +81,7 @@ still follows the same system contract:
 - no inline style props;
 - no hardcoded spacing, radius, border, or color values when a token exists;
 - no pastel cards as the default way to create hierarchy;
-- no nested decorative cards;
-- no one-off Cloudflare platform claims without checking current docs.
+- no nested decorative cards.
 
 Good docs surfaces should feel like product infrastructure: dense, scannable,
 token-driven, and anchored by real code.
