@@ -26,7 +26,7 @@ helpers, and neutral generator mechanics.
 New application code imports those contracts from `app-foundry/core`,
 `app-foundry/react`, or `app-foundry/worker`.
 
-See the canonical [App Foundry architecture](https://github.com/thedjpetersen/app-foundry/blob/main/docs/architecture.md).
+See the canonical [App Foundry architecture](https://thedjpetersen.github.io/app-foundry/architecture/).
 
 ## The presentation seam
 

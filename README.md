@@ -128,9 +128,10 @@ The compatibility layer also adopts the legacy AstryxKit shell singleton. The ne
 ## Documentation
 
 - [AstryxKit docs site](https://thedjpetersen.github.io/astryxkit/)
-- [App Foundry Motivation](https://github.com/thedjpetersen/app-foundry/blob/main/docs/motivation.md)
-- [App Foundry Architecture](https://github.com/thedjpetersen/app-foundry/blob/main/docs/architecture.md)
-- [Presentation Seam](https://github.com/thedjpetersen/app-foundry/blob/main/docs/presentation-seam.md)
+- [App Foundry docs](https://thedjpetersen.github.io/app-foundry/)
+- [App Foundry Motivation](https://thedjpetersen.github.io/app-foundry/motivation/)
+- [App Foundry Architecture](https://thedjpetersen.github.io/app-foundry/architecture/)
+- [Presentation Seam](https://thedjpetersen.github.io/app-foundry/presentation/)
 - [Astryx design-system notes](docs/design-system.md)
 - [Astryx generator recipes](docs/generators.md)
 

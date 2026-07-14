@@ -412,7 +412,7 @@ const packageSurfaces: Surface[] = [
     body: "The design-system-neutral application framework: manifests, activation and disposal, commands, preferences, events, entities, Worker helpers, generator mechanics, and headless React models.",
     code: "app-foundry",
     eyebrow: "Framework",
-    href: "https://github.com/thedjpetersen/app-foundry/blob/main/docs/architecture.md",
+    href: "https://thedjpetersen.github.io/app-foundry/architecture/",
     icon: "wrench",
     title: "App Foundry",
   },
@@ -1594,11 +1594,11 @@ const workerRows: SpecRow[] = [
 
 const docLinks: LinkRow[] = [
   {
-    href: "https://github.com/thedjpetersen/app-foundry/blob/main/docs/architecture.md",
+    href: "https://thedjpetersen.github.io/app-foundry/architecture/",
     label: "App Foundry architecture",
   },
   {
-    href: "https://github.com/thedjpetersen/app-foundry/blob/main/docs/presentation-seam.md",
+    href: "https://thedjpetersen.github.io/app-foundry/presentation/",
     label: "Presentation Seam",
   },
   {
@@ -1606,7 +1606,7 @@ const docLinks: LinkRow[] = [
     label: "Design-system notes",
   },
   {
-    href: "https://github.com/thedjpetersen/app-foundry/blob/main/docs/generators.md",
+    href: "https://thedjpetersen.github.io/app-foundry/generators/",
     label: "Neutral generator engine",
   },
   {
@@ -1870,7 +1870,7 @@ function DocsHero() {
             />
             <Button
               label="App Foundry docs"
-              href="https://github.com/thedjpetersen/app-foundry"
+              href="https://thedjpetersen.github.io/app-foundry/"
               target="_blank"
               rel="noreferrer"
               variant="secondary"
@@ -2245,7 +2245,7 @@ function Motivation() {
             implement it.
           </Text>
           <Link
-            href="https://github.com/thedjpetersen/app-foundry/blob/main/docs/motivation.md"
+            href="https://thedjpetersen.github.io/app-foundry/motivation/"
             target="_blank"
             rel="noreferrer"
             isStandalone

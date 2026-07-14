@@ -50,4 +50,4 @@ AstryxKit chooses presentation imports and starter composition. App Foundry
 defines shared contracts. The host application owns business behavior, routing,
 authorization, bindings, schema, migrations, and deployment.
 
-See [App Foundry's generator engine](https://github.com/thedjpetersen/app-foundry/blob/main/docs/generators.md) for the neutral mechanics.
+See [App Foundry's generator engine](https://thedjpetersen.github.io/app-foundry/generators/) for the neutral mechanics.
