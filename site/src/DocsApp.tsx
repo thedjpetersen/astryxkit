@@ -2191,7 +2191,8 @@ function Install() {
           </SectionHeader>
           <section {...stylex.props(styles.notePanel)}>
             <Text as="p" display="block" color="secondary">
-              The package is live on npm as <Code>astryxkit@0.2.0</Code>. Use
+              The current npm release is <Code>astryxkit@0.1.0</Code>. This
+              source tree is preparing the 0.2.0 three-library release. Use
               the framework exports directly in product code. The short
               <Code>ak</Code> binary is for scaffolding files; runtime imports
               stay package-scoped so module boundaries remain obvious.
@@ -2200,7 +2201,7 @@ function Install() {
           <section {...stylex.props(styles.packageMetaPanel)}>
             <HStack gap={2} wrap="wrap" align="center">
               <Badge variant="success" label="npm latest" />
-              <Code>0.2.0</Code>
+              <Code>0.1.0</Code>
             </HStack>
             <Link
               href="https://www.npmjs.com/package/astryxkit"
