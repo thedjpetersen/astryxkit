@@ -1,6 +1,6 @@
 {
   "name": "astryxkit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "The Astryx UI kit and compatibility package for App Foundry applications.",
   "type": "module",
   "license": "MIT",
