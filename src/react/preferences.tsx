@@ -43,12 +43,7 @@ const styles = stylex.create({
     padding: "var(--spacing-4)",
   },
   settingList: {
-    backgroundColor: "var(--color-background-card)",
-    borderColor: "var(--color-border)",
-    borderRadius: "var(--radius-container)",
-    borderStyle: "solid",
-    borderWidth: "var(--border-width)",
-    overflow: "hidden",
+    minWidth: 0,
   },
   settingMeta: {
     minWidth: 0,
@@ -194,23 +189,13 @@ function PreferenceGroupContent({
 }) {
   return (
     <VStack gap={4}>
-      <HStack justify="between" align="start" gap={3} wrap="wrap">
-        <VStack gap={1}>
-          <HStack gap={2} align="center" wrap="wrap">
-            <Heading level={3}>{group.label}</Heading>
-            <Badge label={ringLabel(group.ring)} variant={ringVariant(group.ring)} />
-          </HStack>
-          <Text type="supporting">
-            {ringLabel(group.ring)} scope - {group.scope}
-          </Text>
-        </VStack>
-        <Badge
-          label={`${group.settings.length} ${
-            group.settings.length === 1 ? "setting" : "settings"
-          }`}
-          variant="neutral"
-        />
-      </HStack>
+      <VStack gap={1}>
+        <Heading level={3}>{group.label}</Heading>
+        <Text type="supporting">
+          {ringLabel(group.ring)} scope · {group.scope} · {group.settings.length}{" "}
+          {group.settings.length === 1 ? "setting" : "settings"}
+        </Text>
+      </VStack>
 
       <VStack gap={0} xstyle={styles.settingList}>
         {group.settings.map((setting, index) => (
@@ -448,22 +433,6 @@ function ringLabel(ring: PreferenceRing) {
   }
 
   return ring[0].toUpperCase() + ring.slice(1);
-}
-
-function ringVariant(ring: PreferenceRing) {
-  if (ring === "platform") {
-    return "cyan";
-  }
-
-  if (ring === "product") {
-    return "teal";
-  }
-
-  if (ring === "feature") {
-    return "purple";
-  }
-
-  return "blue";
 }
 
 function sourceDescription(
