@@ -13,10 +13,15 @@ import { Heading } from "@astryxdesign/core/Heading";
 import { HStack } from "@astryxdesign/core/HStack";
 import { Icon } from "@astryxdesign/core/Icon";
 import { Layout, LayoutContent, LayoutPanel } from "@astryxdesign/core/Layout";
-import { List, ListItem } from "@astryxdesign/core/List";
 import { Section } from "@astryxdesign/core/Section";
 import { SelectableCard } from "@astryxdesign/core/SelectableCard";
 import { Selector } from "@astryxdesign/core/Selector";
+import {
+  SideNav,
+  SideNavHeading,
+  SideNavItem,
+  SideNavSection,
+} from "@astryxdesign/core/SideNav";
 import { Switch } from "@astryxdesign/core/Switch";
 import { Text } from "@astryxdesign/core/Text";
 import { TextInput } from "@astryxdesign/core/TextInput";
@@ -37,8 +42,14 @@ const styles = stylex.create({
   contentHeader: {
     minWidth: 0,
   },
-  groupList: {
-    minWidth: 0,
+  contentCanvas: {
+    marginInline: "auto",
+    maxWidth: "calc(var(--size-element-lg) * 24)",
+    width: "100%",
+  },
+  preferenceNav: {
+    height: "100%",
+    width: "100%",
   },
   row: {
     minWidth: 0,
@@ -84,6 +95,10 @@ export function ShellPreferencesPanel({
   const selectedGroup =
     groups.find((group) => group.id === selectedGroupId) ?? preferredGroup;
   const groupsByRing = useMemo(() => groupSettingsByRing(groups), [groups]);
+  const settingCount = useMemo(
+    () => groups.reduce((total, group) => total + group.settings.length, 0),
+    [groups],
+  );
 
   // The panel follows the user: when the active app changes, selection
   // jumps to that app's settings — but only then. A group the user picked
@@ -115,57 +130,50 @@ export function ShellPreferencesPanel({
         height="auto"
         start={
           <LayoutPanel
-            width={260}
-            padding={3}
+            width="calc(var(--size-element-lg) * 7)"
+            padding={0}
             hasDivider
             role="navigation"
             label="Preference scopes"
             isScrollable={false}
           >
-            <VStack gap={4}>
+            <SideNav
+              xstyle={styles.preferenceNav}
+              header={
+                <SideNavHeading
+                  superheading="Workspace controls"
+                  heading="Preferences"
+                  subheading={`${settingCount} settings from ${groups.length} sources`}
+                  icon={<Icon icon="wrench" />}
+                />
+              }
+            >
               {groupsByRing.map(({ ring, groups: ringGroups }) => (
-                <List
+                <SideNavSection
                   key={ring}
-                  density="compact"
-                  xstyle={styles.groupList}
-                  header={
-                    <VStack gap={0}>
-                      <Text type="label">{ringLabel(ring)}</Text>
-                      <Text type="supporting">
-                        {ringGroups.length}{" "}
-                        {ringGroups.length === 1 ? "group" : "groups"}
-                      </Text>
-                    </VStack>
-                  }
+                  title={ringLabel(ring)}
+                  subtitle={ringDescription(ring)}
                 >
                   {ringGroups.map((group) => (
-                    <ListItem
+                    <SideNavItem
                       key={group.id}
                       label={group.label}
-                      description={group.scope}
+                      href={`#preferences-${group.id}`}
+                      icon={ringIcon(group.ring)}
+                      selectedIcon={ringIcon(group.ring)}
                       isSelected={group.id === selectedGroup.id}
-                      startContent={
-                        <Icon
-                          icon={ringIcon(group.ring)}
-                          color={
-                            group.id === selectedGroup.id ? "accent" : "secondary"
-                          }
-                        />
-                      }
                       endContent={
-                        <Badge
-                          label={String(group.settings.length)}
-                          variant={
-                            group.id === selectedGroup.id ? "blue" : "neutral"
-                          }
-                        />
+                        <Text type="supporting">{group.settings.length}</Text>
                       }
-                      onClick={() => setSelectedGroupId(group.id)}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        setSelectedGroupId(group.id);
+                      }}
                     />
                   ))}
-                </List>
+                </SideNavSection>
               ))}
-            </VStack>
+            </SideNav>
           </LayoutPanel>
         }
         content={
@@ -174,22 +182,21 @@ export function ShellPreferencesPanel({
             isScrollable={false}
             label="Preference settings"
           >
-            <VStack gap={showHeader ? 5 : 4}>
-              {showHeader ? (
-                <HStack justify="between" align="end" gap={4} wrap="wrap">
+            <Section padding={0} variant="transparent" xstyle={styles.contentCanvas}>
+              <VStack gap={showHeader ? 5 : 4}>
+                {showHeader ? (
                   <VStack gap={1} xstyle={styles.contentHeader}>
                     <Heading level={2}>Preferences</Heading>
                     <Text type="supporting">
-                      Settings resolve through user, feature, application,
-                      product, platform, then schema defaults.
+                      Choose a source in the rail, then adjust the controls it owns.
+                      Your changes are saved as personal overrides.
                     </Text>
                   </VStack>
-                  <Badge label={`${groups.length} groups`} variant="blue" />
-                </HStack>
-              ) : null}
+                ) : null}
 
-              <PreferenceGroupContent group={selectedGroup} host={host} />
-            </VStack>
+                <PreferenceGroupContent group={selectedGroup} host={host} />
+              </VStack>
+            </Section>
           </LayoutContent>
         }
       />
@@ -207,10 +214,16 @@ function PreferenceGroupContent({
   return (
     <VStack gap={4}>
       <VStack gap={1}>
+        <HStack gap={1.5} align="center">
+          <Icon icon={ringIcon(group.ring)} color="secondary" />
+          <Text type="supporting" weight="medium">
+            {ringLabel(group.ring)} · {group.category}
+          </Text>
+        </HStack>
         <Heading level={3}>{group.label}</Heading>
         <Text type="supporting">
-          {ringLabel(group.ring)} scope · {group.scope} · {group.settings.length}{" "}
-          {group.settings.length === 1 ? "setting" : "settings"}
+          {group.settings.length} {group.settings.length === 1 ? "control" : "controls"}{" "}
+          for {group.scope}. Resetting a customized value restores the inherited workspace behavior.
         </Text>
       </VStack>
 
@@ -485,6 +498,13 @@ function ringLabel(ring: PreferenceRing) {
   }
 
   return ring[0].toUpperCase() + ring.slice(1);
+}
+
+function ringDescription(ring: PreferenceRing) {
+  if (ring === "platform") return "Shared everywhere";
+  if (ring === "product") return "Workspace defaults";
+  if (ring === "feature") return "Capability controls";
+  return "Connected apps";
 }
 
 function sourceDescription(
