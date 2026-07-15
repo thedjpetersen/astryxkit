@@ -5,6 +5,7 @@
 // drills, ArrowRight drills, Backspace on an empty query backs out.
 
 import { CommandPaletteFooter } from "@astryxdesign/core/CommandPalette";
+import { Button } from "@astryxdesign/core/Button";
 import { Dialog } from "@astryxdesign/core/Dialog";
 import { HStack } from "@astryxdesign/core/HStack";
 import { Icon } from "@astryxdesign/core/Icon";
@@ -54,12 +55,20 @@ export function ShellCommandPalette({
   host,
   isOpen,
   onOpenChange,
+  onRouteQuery,
 }: {
   host: ShellHost;
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
+  onRouteQuery?: (query: string) => void;
 }) {
   const model = useShellCommandPaletteModel({ host, isOpen, onOpenChange });
+  const routeQuery = () => {
+    const query = model.query.trim();
+    if (!query || !onRouteQuery) return;
+    onOpenChange(false);
+    onRouteQuery(query);
+  };
 
   return (
     <Dialog
@@ -87,33 +96,59 @@ export function ShellCommandPalette({
         <Section padding={2} variant="transparent">
           <VStack gap={3} xstyle={styles.results}>
             {model.groups.length > 0 ? (
-              model.groups.map((group) => (
-                <List
-                  key={group.label}
-                  density="compact"
-                  header={
-                    <Text type="supporting" weight="medium">
-                      {group.label}
-                    </Text>
-                  }
-                >
-                  {group.items.map((item) => (
-                    <CommandListItem
-                      key={item.id}
-                      item={item}
-                      isSelected={model.items[model.selectedIndex]?.id === item.id}
-                      onSelect={() => model.executeItem(item)}
-                    />
-                  ))}
-                </List>
-              ))
+              <VStack gap={3}>
+                {model.isApproximateResults ? (
+                  <VStack gap={0.5}>
+                    <Text type="label">No exact command matches</Text>
+                    <Text type="supporting">These commands are the closest available actions.</Text>
+                  </VStack>
+                ) : null}
+                {model.groups.map((group) => (
+                  <List
+                    key={group.label}
+                    density="compact"
+                    header={
+                      <Text type="supporting" weight="medium">
+                        {group.label}
+                      </Text>
+                    }
+                  >
+                    {group.items.map((item) => (
+                      <CommandListItem
+                        key={item.id}
+                        item={item}
+                        isSelected={model.items[model.selectedIndex]?.id === item.id}
+                        onSelect={() => model.executeItem(item)}
+                      />
+                    ))}
+                  </List>
+                ))}
+                {model.isApproximateResults && onRouteQuery ? (
+                  <Button
+                    label={`Ask Lilo about “${truncateQuery(model.query)}”`}
+                    variant="secondary"
+                    size="sm"
+                    icon={<Icon icon="info" />}
+                    onClick={routeQuery}
+                  />
+                ) : null}
+              </VStack>
             ) : (
               <VStack gap={2} align="center">
                 <Icon icon="search" color="secondary" />
-                <Text type="label">No matching commands</Text>
+                <Text type="label">No exact command matches</Text>
                 <Text type="supporting">
-                  Try a different action, page, or entity.
+                  Try another action, or send the query to Lilo.
                 </Text>
+                {onRouteQuery && model.query.trim() ? (
+                  <Button
+                    label={`Ask Lilo about “${truncateQuery(model.query)}”`}
+                    variant="secondary"
+                    size="sm"
+                    icon={<Icon icon="info" />}
+                    onClick={routeQuery}
+                  />
+                ) : null}
               </VStack>
             )}
           </VStack>
@@ -127,6 +162,11 @@ export function ShellCommandPalette({
       </VStack>
     </Dialog>
   );
+}
+
+function truncateQuery(query: string) {
+  const trimmed = query.trim();
+  return trimmed.length > 42 ? `${trimmed.slice(0, 39)}…` : trimmed;
 }
 
 function CommandListItem({
