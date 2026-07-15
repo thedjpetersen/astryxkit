@@ -8,12 +8,14 @@
 import { Badge } from "@astryxdesign/core/Badge";
 import { Button } from "@astryxdesign/core/Button";
 import { Divider } from "@astryxdesign/core/Divider";
+import { Grid } from "@astryxdesign/core/Grid";
 import { Heading } from "@astryxdesign/core/Heading";
 import { HStack } from "@astryxdesign/core/HStack";
 import { Icon } from "@astryxdesign/core/Icon";
 import { Layout, LayoutContent, LayoutPanel } from "@astryxdesign/core/Layout";
 import { List, ListItem } from "@astryxdesign/core/List";
 import { Section } from "@astryxdesign/core/Section";
+import { SelectableCard } from "@astryxdesign/core/SelectableCard";
 import { Selector } from "@astryxdesign/core/Selector";
 import { Switch } from "@astryxdesign/core/Switch";
 import { Text } from "@astryxdesign/core/Text";
@@ -52,6 +54,21 @@ const styles = stylex.create({
     minWidth: "min(calc(var(--size-element-lg) * 7), 100%)",
   },
 });
+
+const appearanceOptions = {
+  dark: {
+    description: "Low-light surfaces with bright foreground contrast.",
+    icon: "eyeSlash",
+  },
+  light: {
+    description: "Bright surfaces with crisp dark typography.",
+    icon: "viewColumns",
+  },
+  system: {
+    description: "Adapts automatically to this device's appearance.",
+    icon: "wrench",
+  },
+} as const;
 
 export function ShellPreferencesPanel({
   host,
@@ -277,6 +294,41 @@ function PreferenceControl({
   }
 
   if (schema.type === "enum" && schema.options) {
+    if (schema.key === "users.appearance") {
+      return (
+        <Grid columns={{ minWidth: 150, max: 3, repeat: "fit" }} gap={2}>
+          {schema.options.map((option) => {
+            const optionValue = String(option.value);
+            const detail =
+              appearanceOptions[optionValue as keyof typeof appearanceOptions];
+
+            return (
+              <SelectableCard
+                key={optionValue}
+                label={`${option.label} appearance`}
+                isSelected={String(value) === optionValue}
+                onChange={() =>
+                  preferences.set(schema.key, option.value, "user")
+                }
+                padding={3}
+                variant="transparent"
+              >
+                <VStack gap={2}>
+                  <Icon icon={detail?.icon ?? "wrench"} size="lg" />
+                  <VStack gap={0}>
+                    <Text type="label">{option.label}</Text>
+                    <Text type="supporting">
+                      {detail?.description ?? "Use this appearance mode."}
+                    </Text>
+                  </VStack>
+                </VStack>
+              </SelectableCard>
+            );
+          })}
+        </Grid>
+      );
+    }
+
     return (
       <VStack gap={0} xstyle={styles.valueControl}>
         <Selector
