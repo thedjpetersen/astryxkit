@@ -39,13 +39,54 @@ import type {
 import { usePreferenceInspection, useSettingsGroups } from "./react-bindings.js";
 
 const styles = stylex.create({
+  panel: {
+    height: "100%",
+    minHeight: 0,
+    width: "100%",
+  },
   contentHeader: {
     minWidth: 0,
   },
   contentCanvas: {
-    marginInline: "auto",
-    maxWidth: "calc(var(--size-element-lg) * 24)",
+    minHeight: "100%",
     width: "100%",
+  },
+  appearancePreview: (mode: "dark" | "light" | "system") => ({
+    backgroundColor: "var(--color-background-body)",
+    borderColor: "var(--color-border)",
+    borderRadius: "var(--radius-inner)",
+    borderStyle: "solid",
+    borderWidth: "var(--border-width)",
+    colorScheme: mode === "system" ? "light dark" : mode,
+    height: "calc(var(--size-element-lg) * 2.75)",
+    overflow: "hidden",
+    width: "100%",
+  }),
+  appearancePreviewBar: {
+    backgroundColor: "var(--color-background-surface)",
+    borderBottomColor: "var(--color-border)",
+    borderBottomStyle: "solid",
+    borderBottomWidth: "var(--border-width)",
+    height: "var(--spacing-4)",
+  },
+  appearancePreviewBody: {
+    height: "100%",
+    padding: "var(--spacing-2)",
+  },
+  appearancePreviewRail: {
+    backgroundColor: "var(--color-background-muted)",
+    borderRadius: "var(--radius-inner)",
+    height: "100%",
+    width: "var(--spacing-6)",
+  },
+  appearancePreviewLine: {
+    backgroundColor: "var(--color-border-emphasized)",
+    borderRadius: "var(--radius-full)",
+    height: "var(--spacing-1)",
+    width: "100%",
+  },
+  appearancePreviewLineShort: {
+    width: "60%",
   },
   preferenceNav: {
     height: "100%",
@@ -125,9 +166,9 @@ export function ShellPreferencesPanel({
   }
 
   return (
-    <Section padding={0} variant="transparent">
+    <Section padding={0} variant="transparent" xstyle={styles.panel}>
       <Layout
-        height="auto"
+        height="fill"
         start={
           <LayoutPanel
             width="calc(var(--size-element-lg) * 7)"
@@ -135,7 +176,7 @@ export function ShellPreferencesPanel({
             hasDivider
             role="navigation"
             label="Preference scopes"
-            isScrollable={false}
+            isScrollable
           >
             <SideNav
               xstyle={styles.preferenceNav}
@@ -179,7 +220,7 @@ export function ShellPreferencesPanel({
         content={
           <LayoutContent
             padding={showHeader ? 4 : 3}
-            isScrollable={false}
+            isScrollable
             label="Preference settings"
           >
             <Section padding={0} variant="transparent" xstyle={styles.contentCanvas}>
@@ -327,9 +368,22 @@ function PreferenceControl({
                 variant="transparent"
               >
                 <VStack gap={2}>
-                  <Icon icon={detail?.icon ?? "wrench"} size="lg" />
+                  <VStack gap={0} xstyle={styles.appearancePreview(optionValue as "dark" | "light" | "system")}>
+                    <Section padding={0} variant="transparent" xstyle={styles.appearancePreviewBar} />
+                    <HStack gap={2} align="stretch" xstyle={styles.appearancePreviewBody}>
+                      <Section padding={0} variant="transparent" xstyle={styles.appearancePreviewRail} />
+                      <VStack gap={2} width="100%">
+                        <Section padding={0} variant="transparent" xstyle={styles.appearancePreviewLine} />
+                        <Section padding={0} variant="transparent" xstyle={[styles.appearancePreviewLine, styles.appearancePreviewLineShort]} />
+                        <Section padding={0} variant="transparent" xstyle={styles.appearancePreviewLine} />
+                      </VStack>
+                    </HStack>
+                  </VStack>
                   <VStack gap={0}>
-                    <Text type="label">{option.label}</Text>
+                    <HStack gap={1.5} align="center">
+                      <Icon icon={detail?.icon ?? "wrench"} size="sm" />
+                      <Text type="label">{option.label}</Text>
+                    </HStack>
                     <Text type="supporting">
                       {detail?.description ?? "Use this appearance mode."}
                     </Text>
