@@ -1,4 +1,5 @@
 import react from "@vitejs/plugin-react";
+import babel from "@rolldown/plugin-babel";
 import { defineConfig } from "vite";
 import { fileURLToPath } from "node:url";
 
@@ -9,23 +10,22 @@ export default defineConfig({
   base: "/astryxkit/",
   root: siteRoot,
   plugins: [
-    react({
-      babel: {
-        plugins: [
-          [
-            "@stylexjs/babel-plugin",
-            {
-              dev: process.env.NODE_ENV !== "production",
-              runtimeInjection: true,
-              treeshakeCompensation: true,
-              unstable_moduleResolution: {
-                rootDir: repoRoot,
-                type: "commonJS",
-              },
+    react(),
+    babel({
+      plugins: [
+        [
+          "@stylexjs/babel-plugin",
+          {
+            dev: process.env.NODE_ENV !== "production",
+            runtimeInjection: true,
+            treeshakeCompensation: true,
+            unstable_moduleResolution: {
+              rootDir: repoRoot,
+              type: "commonJS",
             },
-          ],
+          },
         ],
-      },
+      ],
     }),
   ],
   build: {
